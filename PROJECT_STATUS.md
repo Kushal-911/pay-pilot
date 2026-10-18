@@ -56,6 +56,6 @@ Planned: `DATABASE_URL`, `PORT`, `PAYPAL_BASE_URL`, `PAYPAL_CLIENT_ID`, `PAYPAL_
 
 ## Git and deadline
 - Branch: `main`
-- Latest relevant implementation commit: pending Day 2 commit.
+- Latest relevant implementation commit: `43dc1a5` (`feat: add payment idempotency and recovery states`).
 - Remaining time: approximately 7 calendar days from 2026-10-18; hackathon deadline not supplied.
 - Scope cuts: defer AG Grid, APIMatic, Render, analytics, Elastic, and advanced risk scoring until the P0 flow is stable.
