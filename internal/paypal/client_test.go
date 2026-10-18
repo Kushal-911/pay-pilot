@@ -1,6 +1,7 @@
 package paypal
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -103,6 +104,41 @@ func TestCaptureUsesSuppliedIdempotencyRequestID(t *testing.T) {
 	}
 	if result.Status != "COMPLETED" {
 		t.Fatalf("capture status = %q", result.Status)
+	}
+}
+
+func TestVerifyWebhookPostsRawEventAndHeaderMetadata(t *testing.T) {
+	rawEvent := json.RawMessage(`{ "id":"WH-EVENT-1", "event_type":"PAYMENT.CAPTURE.COMPLETED" }`)
+	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/v1/oauth2/token" {
+			return response(http.StatusOK, `{"access_token":"test-token"}`), nil
+		}
+		if r.URL.Path != "/v1/notifications/verify-webhook-signature" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		var body struct {
+			AuthAlgo  string          `json:"auth_algo"`
+			WebhookID string          `json:"webhook_id"`
+			Event     json.RawMessage `json:"webhook_event"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body.AuthAlgo != "SHA256withRSA" || body.WebhookID != "WEBHOOK-123" {
+			t.Errorf("missing verification values: %+v", body)
+		}
+		if !bytes.Equal(body.Event, rawEvent) {
+			t.Errorf("raw webhook event changed: %s", body.Event)
+		}
+		return response(http.StatusOK, `{"verification_status":"SUCCESS"}`), nil
+	})}
+	api := New("https://paypal.test", "client", "secret", client)
+	valid, err := api.VerifyWebhook(context.Background(), "WEBHOOK-123", WebhookHeaders{AuthAlgo: "SHA256withRSA", CertURL: "https://api.paypal.test/cert", TransmissionID: "t-1", TransmissionSig: "sig", TransmissionTime: "2026-10-18T00:00:00Z"}, rawEvent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !valid {
+		t.Fatal("expected verified webhook")
 	}
 }
 

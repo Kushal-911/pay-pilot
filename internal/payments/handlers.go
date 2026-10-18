@@ -228,7 +228,8 @@ func CapturePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 			return
 		}
 		defer tx.Rollback(ctx)
-		_, err = tx.Exec(ctx, `UPDATE payment_attempts SET paypal_capture_id=$1,status='completed',updated_at=now() WHERE id=$2 AND status='capturing'`, captureID, id)
+		var completedAttemptID string
+		err = tx.QueryRow(ctx, `UPDATE payment_attempts SET paypal_capture_id=$1,status='completed',updated_at=now() WHERE id=$2 AND status IN ('capturing','unknown','failed','completed') AND (paypal_capture_id IS NULL OR paypal_capture_id=$1) RETURNING id`, captureID, id).Scan(&completedAttemptID)
 		if err == nil {
 			_, err = tx.Exec(ctx, `UPDATE orders SET status='paid',updated_at=now() WHERE id=(SELECT order_id FROM payment_attempts WHERE id=$1)`, id)
 		}

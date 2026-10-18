@@ -11,6 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql:ro
       - ./migrations/002_reliability.sql:/docker-entrypoint-initdb.d/002_reliability.sql:ro
+      - ./migrations/003_investigations.sql:/docker-entrypoint-initdb.d/003_investigations.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U paypilot -d paypilot"]
       interval: 5s
@@ -25,6 +26,10 @@ services:
       PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
       PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:-http://localhost:3000/checkout/return}
       PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:-http://localhost:3000/checkout/cancel}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
     ports:
       - "8080:8080"
     depends_on:

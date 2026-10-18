@@ -1,12 +1,13 @@
 {
   "info": {
-    "name": "PayPilot Day 1",
+    "name": "PayPilot API flows",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
     { "key": "orderId", "value": "" },
-    { "key": "paymentId", "value": "" }
+    { "key": "paymentId", "value": "" },
+    { "key": "investigationId", "value": "" }
   ],
   "item": [
     { "name": "Health", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
@@ -16,6 +17,8 @@
     { "name": "List payment attempts", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/payments" } },
     { "name": "Create PayPal order", "request": { "method": "POST", "header": [{ "key": "Idempotency-Key", "value": "demo-checkout-0001" }], "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/paypal-order" } },
     { "name": "Refresh payment", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/refresh" } },
-    { "name": "Capture approved payment", "request": { "method": "POST", "header": [{ "key": "Idempotency-Key", "value": "demo-capture-0001" }], "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture" } }
+    { "name": "Capture approved payment", "request": { "method": "POST", "header": [{ "key": "Idempotency-Key", "value": "demo-capture-0001" }], "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture" } },
+    { "name": "Investigate order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Idempotency-Key", "value": "demo-investigation-001" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"{{orderId}}\",\"question\":\"Why does this order show pending?\"}" }, "url": "{{baseUrl}}/api/v1/investigations" } },
+    { "name": "Get investigation", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/investigations/{{investigationId}}" } }
   ]
 }

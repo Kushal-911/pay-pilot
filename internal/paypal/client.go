@@ -37,6 +37,51 @@ type CaptureResult struct {
 	} `json:"purchase_units"`
 }
 
+type WebhookHeaders struct {
+	AuthAlgo         string
+	CertURL          string
+	TransmissionID   string
+	TransmissionSig  string
+	TransmissionTime string
+}
+
+type webhookVerificationRequest struct {
+	AuthAlgo         string          `json:"auth_algo"`
+	CertURL          string          `json:"cert_url"`
+	TransmissionID   string          `json:"transmission_id"`
+	TransmissionSig  string          `json:"transmission_sig"`
+	TransmissionTime string          `json:"transmission_time"`
+	WebhookID        string          `json:"webhook_id"`
+	Event            json.RawMessage `json:"-"`
+}
+
+func (r webhookVerificationRequest) MarshalJSON() ([]byte, error) {
+	if !json.Valid(r.Event) {
+		return nil, fmt.Errorf("invalid webhook event JSON")
+	}
+	headers, err := json.Marshal(map[string]string{"auth_algo": r.AuthAlgo, "cert_url": r.CertURL, "transmission_id": r.TransmissionID, "transmission_sig": r.TransmissionSig, "transmission_time": r.TransmissionTime, "webhook_id": r.WebhookID})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]byte, 0, len(headers)+len(r.Event)+20)
+	result = append(result, headers[:len(headers)-1]...)
+	result = append(result, `,"webhook_event":`...)
+	result = append(result, r.Event...)
+	result = append(result, '}')
+	return result, nil
+}
+
+func (c *Client) VerifyWebhook(ctx context.Context, webhookID string, headers WebhookHeaders, event json.RawMessage) (bool, error) {
+	var result struct {
+		VerificationStatus string `json:"verification_status"`
+	}
+	body := webhookVerificationRequest{AuthAlgo: headers.AuthAlgo, CertURL: headers.CertURL, TransmissionID: headers.TransmissionID, TransmissionSig: headers.TransmissionSig, TransmissionTime: headers.TransmissionTime, WebhookID: webhookID, Event: event}
+	if err := c.do(ctx, http.MethodPost, "/v1/notifications/verify-webhook-signature", body, &result, ""); err != nil {
+		return false, err
+	}
+	return result.VerificationStatus == "SUCCESS", nil
+}
+
 func New(baseURL, clientID, secret string, client *http.Client) *Client {
 	if baseURL == "" {
 		baseURL = "https://api-m.sandbox.paypal.com"
@@ -93,7 +138,11 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any,
 	}
 	var data []byte
 	if body != nil {
-		data, err = json.Marshal(body)
+		if webhookBody, ok := body.(webhookVerificationRequest); ok {
+			data, err = webhookBody.MarshalJSON()
+		} else {
+			data, err = json.Marshal(body)
+		}
 		if err != nil {
 			return err
 		}

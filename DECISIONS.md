@@ -20,3 +20,13 @@
 ## 2026-10-18 — Unknown capture outcomes require provider refresh
 - Persist `capturing` before contacting PayPal and `unknown` when the response cannot confirm an outcome. Only a provider refresh can reconcile `unknown` back to `created` or forward to `completed`.
 - Rationale: a timeout cannot be treated as a failed capture; retry eligibility comes from current authoritative provider state.
+
+## 2026-10-18 — Deterministic evidence first, optional model explanation second
+- Always load order, attempt, and matching event records and run deterministic comparisons. The optional OpenAI Responses adapter receives only four scoped, read-only functions; recommendations remain a fixed enum and deterministic payment-state checks override the model.
+- Model output is accepted only when its report fields validate and every cited evidence ID resolves to a record in the loaded set. Missing credentials, provider failures, and invalid model output preserve and return a deterministic report.
+- Rationale: investigation remains useful without an LLM account and the model cannot claim a payment outcome or perform a payment mutation.
+
+## 2026-10-18 — Verify PayPal webhooks through PayPal postback verification
+- Send the original raw event bytes and PayPal transmission headers to PayPal's `verify-webhook-signature` endpoint using the configured webhook ID. Persist only selected event metadata, not the full event payload.
+- Deduplicate by provider event ID and apply capture transitions in one database transaction; completed capture state is never downgraded by later pending/denied events.
+- Rationale: use the provider-supported verification path and keep event processing auditable while limiting retained payload data.

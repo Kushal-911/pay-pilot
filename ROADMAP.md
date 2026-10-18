@@ -1,33 +1,35 @@
 # PayPilot Roadmap
 
+Status legend: `[x]` verified complete, `[~]` implemented or partially complete but acceptance not verified, `[ ]` not started or blocked.
+
 ## Day 1 — Foundation and PayPal checkout (P0)
-- [x] Initialize Go/Gin backend and PostgreSQL persistence.
-- [x] Add Docker Compose, environment example, health endpoint, and initial SQL migration.
-- [x] Implement internal order creation and retrieval.
-- [x] Implement PayPal order creation, approval URL response, and server-side capture endpoint.
-- [x] Start Postman collection.
+- [~] Initialize Go/Gin backend and PostgreSQL persistence (code exists; PostgreSQL runtime unverified).
+- [~] Add Docker Compose, environment example, health endpoint, and initial SQL migration (config validates; daemon unavailable).
+- [~] Implement internal order creation and retrieval (not exercised against PostgreSQL).
+- [~] Implement PayPal order creation, approval URL response, and server-side capture endpoint (Sandbox flow not run).
+- [~] Start Postman collection (starter requests exist; live API not run).
 - [ ] Exercise the complete Sandbox checkout with configured credentials and buyer approval.
 - Acceptance: a Sandbox payment completes and its verified result is persisted and visible. External credentials required.
 
 ## Day 2 — Payment lifecycle and reliability (P0)
-- [x] Add payment attempts, idempotency, state-transition rules, and payment history/detail.
-- [x] Model unknown provider outcomes and safe refresh before consequential retries.
-- [x] Add focused adapter tests and a PostgreSQL-gated idempotency integration test.
+- [~] Add payment attempts, idempotency, state-transition rules, and payment history/detail (code exists; DB integration pending).
+- [~] Model unknown provider outcomes and safe refresh before consequential retries (unit adapter path tested; DB transitions unverified).
+- [~] Add focused adapter tests and a PostgreSQL-gated idempotency integration test (unit tests pass; DB test skipped without `TEST_DATABASE_URL`).
 - [ ] Run PostgreSQL integration and state-transition verification (Docker daemon unavailable so far).
 - Acceptance: replay and conflicting transitions are handled safely; implementation is present, database runtime verification is pending.
 
 ## Day 3 — AI investigation (P0)
-- [ ] Add provider abstraction and one tool-calling LLM integration.
-- [ ] Implement four constrained read-only evidence tools.
-- [ ] Persist structured reports with validated evidence references.
+- [~] Add provider abstraction and optional OpenAI Responses tool-calling integration (fake API tested; no live credentials).
+- [~] Implement four constrained read-only evidence tools.
+- [~] Persist structured reports with validated evidence references (migration/handler implemented; DB path unverified).
 - [ ] Build basic investigation UI.
-- Acceptance: an investigation explains a seeded discrepancy using valid application evidence.
+- Acceptance: backend report and evidence workflow implemented; full persisted discrepancy demo and UI remain unverified.
 
 ## Day 4 — Webhooks and reconciliation (P0)
-- [ ] Verify, persist, and deduplicate PayPal webhooks.
-- [ ] Reconcile provider events deterministically; support status refresh.
+- [~] Verify, persist, and deduplicate PayPal webhooks (postback verification implemented; PayPal/PostgreSQL runtime pending).
+- [~] Reconcile order/attempt/provider event records deterministically; fake out-of-order tests pass; DB runtime pending.
 - [ ] Add approval/rejection workflow and audit trail.
-- [ ] Test duplicate and out-of-order events.
+- [~] Test out-of-order event decisions with pure tests; duplicate-event DB behavior still needs integration verification.
 - Acceptance: events update records safely and recommendations cannot bypass backend rules.
 
 ## Day 5 — Product UI (P0/P1)

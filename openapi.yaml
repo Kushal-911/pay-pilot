@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: PayPilot API
   version: 0.1.0
-  description: Initial payment checkout and order API.
+  description: PayPal checkout, payment evidence, and investigation API.
 servers:
   - url: http://localhost:8080
 paths:
@@ -81,3 +81,58 @@ paths:
         '200': { description: Refreshed provider state }
         '404': { description: Payment attempt not found }
         '502': { description: Provider state could not be refreshed }
+  /api/v1/orders/{id}/investigations:
+    get:
+      summary: List investigations for an order
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Recent investigations }
+        '400': { description: Invalid order UUID }
+  /api/v1/investigations:
+    post:
+      summary: Investigate an order using persisted evidence
+      parameters:
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 8, maxLength: 128 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id, question]
+              properties:
+                order_id: { type: string, format: uuid }
+                question: { type: string, minLength: 3, maxLength: 2000 }
+      responses:
+        '201': { description: Persisted investigation with validated evidence references }
+        '400': { description: Invalid request }
+        '404': { description: Order not found }
+        '500': { description: Evidence or persistence error }
+  /api/v1/investigations/{id}:
+    get:
+      summary: Retrieve a persisted investigation and its evidence
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Investigation report }
+        '404': { description: Investigation not found }
+  /api/v1/webhooks/paypal:
+    post:
+      summary: Verify, deduplicate, and reconcile a PayPal webhook
+      description: Requires PayPal transmission headers and configured PAYPAL_WEBHOOK_ID. Only verified events are persisted.
+      parameters:
+        - { in: header, name: paypal-auth-algo, required: true, schema: { type: string } }
+        - { in: header, name: paypal-cert-url, required: true, schema: { type: string, format: uri } }
+        - { in: header, name: paypal-transmission-id, required: true, schema: { type: string } }
+        - { in: header, name: paypal-transmission-sig, required: true, schema: { type: string } }
+        - { in: header, name: paypal-transmission-time, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [id, event_type, resource] }
+      responses:
+        '200': { description: Verified event accepted or duplicate delivery acknowledged }
+        '401': { description: Signature invalid or required headers missing }
+        '502': { description: PayPal signature verification unavailable }

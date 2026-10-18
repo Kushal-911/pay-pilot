@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"paypilot/internal/investigations"
 	"paypilot/internal/payments"
 	"paypilot/internal/paypal"
 )
@@ -31,6 +32,10 @@ func main() {
 		port = "8080"
 	}
 	paypalClient := paypal.New(os.Getenv("PAYPAL_BASE_URL"), os.Getenv("PAYPAL_CLIENT_ID"), os.Getenv("PAYPAL_CLIENT_SECRET"), http.DefaultClient)
+	var investigationModel investigations.Model
+	if os.Getenv("OPENAI_API_KEY") != "" || os.Getenv("OPENAI_MODEL") != "" {
+		investigationModel = investigations.OpenAIModel{APIKey: os.Getenv("OPENAI_API_KEY"), Model: os.Getenv("OPENAI_MODEL"), BaseURL: os.Getenv("OPENAI_BASE_URL"), HTTPClient: &http.Client{Timeout: 20 * time.Second}}
+	}
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.GET("/health", func(c *gin.Context) {
@@ -50,6 +55,10 @@ func main() {
 	api.POST("/orders/:id/paypal-order", payments.Idempotency(db), payments.CreatePayPalOrder(db, paypalClient))
 	api.POST("/payments/:id/capture", payments.Idempotency(db), payments.CapturePayPalOrder(db, paypalClient))
 	api.GET("/payments/:id/refresh", payments.RefreshPayPalOrder(db, paypalClient))
+	api.POST("/webhooks/paypal", payments.PayPalWebhook(db, paypalClient, os.Getenv("PAYPAL_WEBHOOK_ID")))
+	api.POST("/investigations", payments.Idempotency(db), investigations.CreateHandler(db, investigationModel))
+	api.GET("/investigations/:id", investigations.GetHandler(db))
+	api.GET("/orders/:id/investigations", investigations.ListForOrderHandler(db))
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
