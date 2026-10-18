@@ -48,6 +48,6 @@ Planned: `DATABASE_URL`, `PORT`, `PAYPAL_BASE_URL`, `PAYPAL_CLIENT_ID`, `PAYPAL_
 
 ## Git and deadline
 - Branch: `main`
-- Latest relevant commit: none (repository has no commits).
+- Latest relevant implementation commit: `c20e77e` (`feat: add PayPal checkout foundation`).
 - Remaining time: approximately 7 calendar days from 2026-10-18; hackathon deadline not supplied.
 - Scope cuts: defer AG Grid, APIMatic, Render, analytics, Elastic, and advanced risk scoring until the P0 flow is stable.
