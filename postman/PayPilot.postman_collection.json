@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "PayPilot Day 1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "orderId", "value": "" },
+    { "key": "paymentId", "value": "" }
+  ],
+  "item": [
+    { "name": "Health", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Create order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"merchant_reference\":\"demo-001\",\"amount_minor\":2500,\"currency\":\"USD\",\"description\":\"Demo order\"}" }, "url": "{{baseUrl}}/api/v1/orders" } },
+    { "name": "List orders", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders" } },
+    { "name": "Get order", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}" } },
+    { "name": "Create PayPal order", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/paypal-order" } },
+    { "name": "Capture approved payment", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture" } }
+  ]
+}

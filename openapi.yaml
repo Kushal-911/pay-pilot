@@ -1,0 +1,62 @@
+openapi: 3.0.3
+info:
+  title: PayPilot API
+  version: 0.1.0
+  description: Initial payment checkout and order API.
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Check API and database health
+      responses:
+        '200': { description: Healthy }
+        '503': { description: Database unavailable }
+  /api/v1/orders:
+    post:
+      summary: Create an internal order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [merchant_reference, amount_minor, currency, description]
+              properties:
+                merchant_reference: { type: string, maxLength: 120 }
+                amount_minor: { type: integer, format: int64, minimum: 1 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                description: { type: string, maxLength: 255 }
+      responses:
+        '201': { description: Order created }
+        '400': { description: Invalid request }
+        '409': { description: Reference conflict }
+    get:
+      summary: List recent orders
+      responses:
+        '200': { description: Up to 100 orders }
+  /api/v1/orders/{id}:
+    get:
+      summary: Get an order
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Order }
+        '404': { description: Not found }
+  /api/v1/orders/{id}/paypal-order:
+    post:
+      summary: Create a PayPal Sandbox checkout order
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201': { description: PayPal order and approval URL }
+        '502': { description: Provider error }
+  /api/v1/payments/{id}/capture:
+    post:
+      summary: Capture an approved PayPal order server side
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Verified completed capture }
+        '409': { description: Invalid state or incomplete capture }
+        '502': { description: Provider outcome could not be confirmed }
