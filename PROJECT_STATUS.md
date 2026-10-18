@@ -75,6 +75,6 @@ Required: `DATABASE_URL`. Optional: `PORT`, `PAYPAL_BASE_URL`, `PAYPAL_CLIENT_ID
 
 ## Git and deadline
 - Branch: `main`
-- Latest relevant implementation commit: pending this session's investigation/webhook commit.
+- Latest relevant implementation commit: `141bec3` (`feat: add payment investigations and webhook reconciliation`).
 - Remaining time: five planned workdays per updated direction; external deadline not supplied.
 - Scope cuts: defer AG Grid, APIMatic, Render, analytics, Elastic, and advanced risk scoring until the P0 flow is stable.
