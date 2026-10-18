@@ -10,10 +10,12 @@
   ],
   "item": [
     { "name": "Health", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
-    { "name": "Create order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"merchant_reference\":\"demo-001\",\"amount_minor\":2500,\"currency\":\"USD\",\"description\":\"Demo order\"}" }, "url": "{{baseUrl}}/api/v1/orders" } },
+    { "name": "Create order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Idempotency-Key", "value": "demo-order-0001" }], "body": { "mode": "raw", "raw": "{\"merchant_reference\":\"demo-001\",\"amount_minor\":2500,\"currency\":\"USD\",\"description\":\"Demo order\"}" }, "url": "{{baseUrl}}/api/v1/orders" } },
     { "name": "List orders", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders" } },
     { "name": "Get order", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}" } },
-    { "name": "Create PayPal order", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/paypal-order" } },
-    { "name": "Capture approved payment", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture" } }
+    { "name": "List payment attempts", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/payments" } },
+    { "name": "Create PayPal order", "request": { "method": "POST", "header": [{ "key": "Idempotency-Key", "value": "demo-checkout-0001" }], "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/paypal-order" } },
+    { "name": "Refresh payment", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/refresh" } },
+    { "name": "Capture approved payment", "request": { "method": "POST", "header": [{ "key": "Idempotency-Key", "value": "demo-capture-0001" }], "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture" } }
   ]
 }

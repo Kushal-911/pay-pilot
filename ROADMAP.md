@@ -10,10 +10,11 @@
 - Acceptance: a Sandbox payment completes and its verified result is persisted and visible. External credentials required.
 
 ## Day 2 — Payment lifecycle and reliability (P0)
-- [ ] Add payment attempts, idempotency, state-transition rules, and payment history/detail.
-- [ ] Model unknown provider outcomes and safe refresh before consequential retries.
-- [ ] Add focused unit and HTTP tests.
-- Acceptance: replay and conflicting transitions are handled safely.
+- [x] Add payment attempts, idempotency, state-transition rules, and payment history/detail.
+- [x] Model unknown provider outcomes and safe refresh before consequential retries.
+- [x] Add focused adapter tests and a PostgreSQL-gated idempotency integration test.
+- [ ] Run PostgreSQL integration and state-transition verification (Docker daemon unavailable so far).
+- Acceptance: replay and conflicting transitions are handled safely; implementation is present, database runtime verification is pending.
 
 ## Day 3 — AI investigation (P0)
 - [ ] Add provider abstraction and one tool-calling LLM integration.

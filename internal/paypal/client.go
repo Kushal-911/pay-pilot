@@ -3,8 +3,6 @@ package paypal
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -49,21 +47,27 @@ func New(baseURL, clientID, secret string, client *http.Client) *Client {
 	return &Client{strings.TrimRight(baseURL, "/"), clientID, secret, client}
 }
 
-func (c *Client) CreateOrder(ctx context.Context, reference, description, currency string, minor int64, returnURL, cancelURL string) (OrderResult, error) {
+func (c *Client) CreateOrder(ctx context.Context, reference, description, currency string, minor int64, returnURL, cancelURL, requestID string) (OrderResult, error) {
 	var out OrderResult
 	amount := fmt.Sprintf("%d.%02d", minor/100, minor%100)
 	body := map[string]any{"intent": "CAPTURE", "purchase_units": []any{map[string]any{"reference_id": reference, "description": description, "amount": map[string]string{"currency_code": currency, "value": amount}}}, "application_context": map[string]string{"return_url": returnURL, "cancel_url": cancelURL, "user_action": "PAY_NOW"}}
-	err := c.do(ctx, http.MethodPost, "/v2/checkout/orders", body, &out)
+	err := c.do(ctx, http.MethodPost, "/v2/checkout/orders", body, &out, requestID)
 	return out, err
 }
 
-func (c *Client) Capture(ctx context.Context, orderID string) (CaptureResult, error) {
+func (c *Client) Capture(ctx context.Context, orderID, requestID string) (CaptureResult, error) {
 	var out CaptureResult
-	err := c.do(ctx, http.MethodPost, "/v2/checkout/orders/"+url.PathEscape(orderID)+"/capture", map[string]string{}, &out)
+	err := c.do(ctx, http.MethodPost, "/v2/checkout/orders/"+url.PathEscape(orderID)+"/capture", map[string]string{}, &out, requestID)
 	return out, err
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body any, out any) error {
+func (c *Client) GetOrder(ctx context.Context, orderID string) (CaptureResult, error) {
+	var out CaptureResult
+	err := c.do(ctx, http.MethodGet, "/v2/checkout/orders/"+url.PathEscape(orderID), nil, &out, "")
+	return out, err
+}
+
+func (c *Client) do(ctx context.Context, method, path string, body any, out any, requestID string) error {
 	if c.clientID == "" || c.secret == "" {
 		return fmt.Errorf("PayPal credentials are not configured")
 	}
@@ -87,21 +91,24 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any)
 	if err := json.NewDecoder(tokenResp.Body).Decode(&token); err != nil {
 		return fmt.Errorf("decode PayPal token: %w", err)
 	}
-	data, err := json.Marshal(body)
-	if err != nil {
-		return err
+	var data []byte
+	if body != nil {
+		data, err = json.Marshal(body)
+		if err != nil {
+			return err
+		}
 	}
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-	req.Header.Set("Content-Type", "application/json")
-	requestID := make([]byte, 16)
-	if _, err := rand.Read(requestID); err != nil {
-		return fmt.Errorf("create PayPal request id: %w", err)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("PayPal-Request-Id", hex.EncodeToString(requestID))
+	if requestID != "" {
+		req.Header.Set("PayPal-Request-Id", requestID)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("PayPal API request: %w", err)

@@ -10,6 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql:ro
+      - ./migrations/002_reliability.sql:/docker-entrypoint-initdb.d/002_reliability.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U paypilot -d paypilot"]
       interval: 5s

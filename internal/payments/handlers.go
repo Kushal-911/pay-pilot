@@ -37,7 +37,7 @@ func CreateOrder(db *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 		var id string
-		err := db.QueryRow(c.Request.Context(), `INSERT INTO orders(merchant_reference,amount_minor,currency,description,status) VALUES($1,$2,$3,$4,'pending') RETURNING id`, in.MerchantReference, in.AmountMinor, in.Currency, in.Description).Scan(&id)
+		err := db.QueryRow(c.Request.Context(), `INSERT INTO orders(merchant_reference,amount_minor,currency,description,status) VALUES($1,$2,$3,$4,'pending') ON CONFLICT(merchant_reference) DO UPDATE SET merchant_reference=EXCLUDED.merchant_reference WHERE orders.amount_minor=EXCLUDED.amount_minor AND orders.currency=EXCLUDED.currency AND orders.description=EXCLUDED.description RETURNING id`, in.MerchantReference, in.AmountMinor, in.Currency, in.Description).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusConflict, gin.H{"error": gin.H{"code": "order_conflict", "message": "Could not create order; merchant reference may already exist"}})
 			return
@@ -91,6 +91,43 @@ func GetOrder(db *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
+func ListOrderPayments(db *pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var exists bool
+		if err := db.QueryRow(c.Request.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE id=$1)`, c.Param("id")).Scan(&exists); err != nil {
+			databaseError(c)
+			return
+		}
+		if !exists {
+			c.JSON(http.StatusNotFound, errorBody("not_found", "Order not found"))
+			return
+		}
+		rows, err := db.Query(c.Request.Context(), `SELECT id,paypal_order_id,paypal_capture_id,amount_minor,currency,status,created_at,updated_at FROM payment_attempts WHERE order_id=$1 ORDER BY created_at DESC`, c.Param("id"))
+		if err != nil {
+			databaseError(c)
+			return
+		}
+		defer rows.Close()
+		attempts := make([]map[string]any, 0)
+		for rows.Next() {
+			var id, status, currency string
+			var paypalOrderID, captureID *string
+			var amount int64
+			var created, updated time.Time
+			if err := rows.Scan(&id, &paypalOrderID, &captureID, &amount, &currency, &status, &created, &updated); err != nil {
+				databaseError(c)
+				return
+			}
+			attempts = append(attempts, map[string]any{"id": id, "paypal_order_id": paypalOrderID, "paypal_capture_id": captureID, "amount_minor": amount, "currency": currency, "status": status, "created_at": created, "updated_at": updated})
+		}
+		if rows.Err() != nil {
+			databaseError(c)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"data": attempts})
+	}
+}
+
 func CreatePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
@@ -115,7 +152,7 @@ func CreatePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc 
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{"code": "provider_unconfigured", "message": "PayPal return and cancel URLs are required"}})
 			return
 		}
-		result, err := client.CreateOrder(ctx, ref, description, currency, amount, returnURL, cancelURL)
+		result, err := client.CreateOrder(ctx, ref, description, currency, amount, returnURL, cancelURL, providerRequestID("order", id))
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"code": "provider_error", "message": "PayPal order creation failed"}})
 			return
@@ -150,12 +187,28 @@ func CapturePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 			databaseError(c)
 			return
 		}
+		if status == "completed" {
+			var captureID string
+			if err := db.QueryRow(ctx, `SELECT paypal_capture_id FROM payment_attempts WHERE id=$1`, id).Scan(&captureID); err != nil {
+				databaseError(c)
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"payment_id": id, "paypal_order_id": orderID, "paypal_capture_id": captureID, "status": "completed"})
+			return
+		}
 		if status != "created" {
 			c.JSON(http.StatusConflict, gin.H{"error": gin.H{"code": "invalid_state", "message": "Payment attempt is not eligible for capture"}})
 			return
 		}
-		result, err := client.Capture(ctx, orderID)
+		var locked string
+		err = db.QueryRow(ctx, `UPDATE payment_attempts SET status='capturing',updated_at=now() WHERE id=$1 AND status='created' RETURNING id`, id).Scan(&locked)
 		if err != nil {
+			c.JSON(http.StatusConflict, gin.H{"error": gin.H{"code": "invalid_state", "message": "Payment attempt is already being processed or changed state"}})
+			return
+		}
+		result, err := client.Capture(ctx, orderID, providerRequestID("capture", id))
+		if err != nil {
+			_, _ = db.Exec(ctx, `UPDATE payment_attempts SET status='unknown',updated_at=now() WHERE id=$1 AND status='capturing'`, id)
 			c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"code": "provider_error", "message": "PayPal capture outcome could not be confirmed; refresh provider state before retrying"}})
 			return
 		}
@@ -165,7 +218,8 @@ func CapturePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 			captureStatus = result.PurchaseUnits[0].Payments.Captures[0].Status
 		}
 		if result.Status != "COMPLETED" || captureStatus != "COMPLETED" || captureID == "" {
-			c.JSON(http.StatusConflict, gin.H{"error": gin.H{"code": "capture_incomplete", "message": "PayPal did not confirm a completed capture"}, "provider_status": result.Status})
+			_, _ = db.Exec(ctx, `UPDATE payment_attempts SET status='unknown',updated_at=now() WHERE id=$1 AND status='capturing'`, id)
+			c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"code": "capture_incomplete", "message": "PayPal did not confirm a completed capture; refresh provider state before retrying"}, "provider_status": result.Status})
 			return
 		}
 		tx, err := db.Begin(ctx)
@@ -174,7 +228,7 @@ func CapturePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 			return
 		}
 		defer tx.Rollback(ctx)
-		_, err = tx.Exec(ctx, `UPDATE payment_attempts SET paypal_capture_id=$1,status='completed',updated_at=now() WHERE id=$2`, captureID, id)
+		_, err = tx.Exec(ctx, `UPDATE payment_attempts SET paypal_capture_id=$1,status='completed',updated_at=now() WHERE id=$2 AND status='capturing'`, captureID, id)
 		if err == nil {
 			_, err = tx.Exec(ctx, `UPDATE orders SET status='paid',updated_at=now() WHERE id=(SELECT order_id FROM payment_attempts WHERE id=$1)`, id)
 		}
@@ -186,6 +240,70 @@ func CapturePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"payment_id": id, "paypal_order_id": orderID, "paypal_capture_id": captureID, "status": "completed"})
+	}
+}
+
+func RefreshPayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
+		defer cancel()
+		var id, orderID, status string
+		err := db.QueryRow(ctx, `SELECT id,paypal_order_id,status FROM payment_attempts WHERE id=$1`, c.Param("id")).Scan(&id, &orderID, &status)
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"code": "not_found", "message": "Payment attempt not found"}})
+			return
+		}
+		if err != nil {
+			databaseError(c)
+			return
+		}
+		result, err := client.GetOrder(ctx, orderID)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"code": "provider_error", "message": "Could not refresh PayPal order state"}})
+			return
+		}
+		captureID, captureStatus := "", ""
+		if len(result.PurchaseUnits) > 0 && len(result.PurchaseUnits[0].Payments.Captures) > 0 {
+			captureID = result.PurchaseUnits[0].Payments.Captures[0].ID
+			captureStatus = result.PurchaseUnits[0].Payments.Captures[0].Status
+		}
+		if result.Status == "COMPLETED" && captureID != "" && captureStatus == "COMPLETED" {
+			tx, err := db.Begin(ctx)
+			if err != nil {
+				databaseError(c)
+				return
+			}
+			defer tx.Rollback(ctx)
+			var updatedID string
+			err = tx.QueryRow(ctx, `UPDATE payment_attempts SET paypal_capture_id=$1,status='completed',updated_at=now() WHERE id=$2 AND status IN ('unknown','capturing','created','completed') RETURNING id`, captureID, id).Scan(&updatedID)
+			if err == nil {
+				_, err = tx.Exec(ctx, `UPDATE orders SET status='paid',updated_at=now() WHERE id=(SELECT order_id FROM payment_attempts WHERE id=$1)`, id)
+			}
+			if err == nil {
+				err = tx.Commit(ctx)
+			}
+			if err != nil {
+				databaseError(c)
+				return
+			}
+			status = "completed"
+		} else if result.Status == "APPROVED" && (status == "unknown" || status == "capturing") {
+			var updatedStatus string
+			err = db.QueryRow(ctx, `UPDATE payment_attempts SET status='created',updated_at=now() WHERE id=$1 AND status IN ('unknown','capturing') RETURNING status`, id).Scan(&updatedStatus)
+			if err == nil {
+				status = updatedStatus
+			} else if errors.Is(err, pgx.ErrNoRows) {
+				err = db.QueryRow(ctx, `SELECT status FROM payment_attempts WHERE id=$1`, id).Scan(&status)
+				if err != nil {
+					databaseError(c)
+					return
+				}
+			} else {
+				databaseError(c)
+				return
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"payment_id": id, "paypal_order_id": orderID, "provider_status": result.Status, "status": status, "paypal_capture_id": captureID})
 	}
 }
 

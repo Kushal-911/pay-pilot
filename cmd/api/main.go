@@ -43,11 +43,13 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	api := r.Group("/api/v1")
-	api.POST("/orders", payments.CreateOrder(db))
+	api.POST("/orders", payments.Idempotency(db), payments.CreateOrder(db))
 	api.GET("/orders", payments.ListOrders(db))
 	api.GET("/orders/:id", payments.GetOrder(db))
-	api.POST("/orders/:id/paypal-order", payments.CreatePayPalOrder(db, paypalClient))
-	api.POST("/payments/:id/capture", payments.CapturePayPalOrder(db, paypalClient))
+	api.GET("/orders/:id/payments", payments.ListOrderPayments(db))
+	api.POST("/orders/:id/paypal-order", payments.Idempotency(db), payments.CreatePayPalOrder(db, paypalClient))
+	api.POST("/payments/:id/capture", payments.Idempotency(db), payments.CapturePayPalOrder(db, paypalClient))
+	api.GET("/payments/:id/refresh", payments.RefreshPayPalOrder(db, paypalClient))
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}

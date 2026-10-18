@@ -18,7 +18,9 @@ Example order:
 
 `amount_minor` is an integer in the currency's minor unit. This initial implementation formats PayPal amounts with two decimal places, so use two-decimal currencies (for example USD) until currency exponent handling is expanded.
 
-PostgreSQL initialization runs `migrations/001_initial.sql` on the first creation of the Compose volume. To apply changed initial migrations locally, reset the local database volume deliberately with `docker compose down -v` and restart.
+PostgreSQL initialization runs the numbered SQL files in `migrations/` on first creation of the Compose volume. Every mutation endpoint requires an `Idempotency-Key` header (8–128 characters); repeating the same key and request returns the stored response, while reusing it with a different request returns `409`. Capture outcomes that cannot be confirmed are stored as `unknown`; call the refresh endpoint to retrieve the authoritative PayPal state before retrying.
+
+To apply new migrations to an existing local database, apply the numbered SQL migration once using `psql "$DATABASE_URL" -f migrations/002_reliability.sql`. Resetting the local Compose volume is another option, but deletes its data.
 
 ## API and project plan
 

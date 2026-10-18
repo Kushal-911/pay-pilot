@@ -28,6 +28,9 @@ func TestCreateOrderUsesOAuthAndMinorUnits(t *testing.T) {
 			if r.Header.Get("Authorization") != "Bearer test-token" {
 				t.Errorf("missing bearer token")
 			}
+			if got := r.Header.Get("PayPal-Request-Id"); got != "stable-order-request" {
+				t.Errorf("PayPal-Request-Id = %q", got)
+			}
 			var body struct {
 				PurchaseUnits []struct {
 					Amount struct {
@@ -48,7 +51,7 @@ func TestCreateOrderUsesOAuthAndMinorUnits(t *testing.T) {
 		}
 	})}
 	api := New("https://paypal.test", "client", "secret", client)
-	result, err := api.CreateOrder(context.Background(), "ref-1", "Test", "USD", 2500, "https://merchant.test/return", "https://merchant.test/cancel")
+	result, err := api.CreateOrder(context.Background(), "ref-1", "Test", "USD", 2500, "https://merchant.test/return", "https://merchant.test/cancel", "stable-order-request")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,12 +60,58 @@ func TestCreateOrderUsesOAuthAndMinorUnits(t *testing.T) {
 	}
 }
 
+func TestGetOrderRefreshesProviderState(t *testing.T) {
+	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/v1/oauth2/token" {
+			return response(http.StatusOK, `{"access_token":"test-token"}`), nil
+		}
+		if r.Method != http.MethodGet || r.URL.Path != "/v2/checkout/orders/ORDER-2" {
+			t.Fatalf("unexpected refresh request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("PayPal-Request-Id"); got != "" {
+			t.Errorf("GET refresh unexpectedly has request ID %q", got)
+		}
+		return response(http.StatusOK, `{"id":"ORDER-2","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-2","status":"COMPLETED"}]}}]}`), nil
+	})}
+	api := New("https://paypal.test", "client", "secret", client)
+	result, err := api.GetOrder(context.Background(), "ORDER-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "COMPLETED" || result.PurchaseUnits[0].Payments.Captures[0].ID != "CAPTURE-2" {
+		t.Fatalf("unexpected refreshed state: %+v", result)
+	}
+}
+
+func TestCaptureUsesSuppliedIdempotencyRequestID(t *testing.T) {
+	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/v1/oauth2/token" {
+			return response(http.StatusOK, `{"access_token":"test-token"}`), nil
+		}
+		if r.Method != http.MethodPost || r.URL.Path != "/v2/checkout/orders/ORDER-3/capture" {
+			t.Fatalf("unexpected capture request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("PayPal-Request-Id"); got != "stable-capture-request" {
+			t.Errorf("PayPal-Request-Id = %q", got)
+		}
+		return response(http.StatusCreated, `{"id":"ORDER-3","status":"COMPLETED"}`), nil
+	})}
+	api := New("https://paypal.test", "client", "secret", client)
+	result, err := api.Capture(context.Background(), "ORDER-3", "stable-capture-request")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != "COMPLETED" {
+		t.Fatalf("capture status = %q", result.Status)
+	}
+}
+
 func TestProviderFailureDoesNotLeakBody(t *testing.T) {
 	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		return response(http.StatusUnauthorized, "sensitive provider detail"), nil
 	})
 	client := New("https://paypal.test", "client", "secret", &http.Client{Transport: transport})
-	_, err := client.CreateOrder(context.Background(), "r", "d", "USD", 100, "r", "c")
+	_, err := client.CreateOrder(context.Background(), "r", "d", "USD", 100, "r", "c", "stable-order-request")
 	if err == nil {
 		t.Fatal("expected OAuth error")
 	}

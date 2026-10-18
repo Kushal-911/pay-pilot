@@ -15,6 +15,8 @@ paths:
   /api/v1/orders:
     post:
       summary: Create an internal order
+      parameters:
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 8, maxLength: 128 } }
       requestBody:
         required: true
         content:
@@ -43,11 +45,20 @@ paths:
       responses:
         '200': { description: Order }
         '404': { description: Not found }
+  /api/v1/orders/{id}/payments:
+    get:
+      summary: List payment attempts for an order
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Payment attempts }
+        '404': { description: Order not found }
   /api/v1/orders/{id}/paypal-order:
     post:
       summary: Create a PayPal Sandbox checkout order
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 8, maxLength: 128 } }
       responses:
         '201': { description: PayPal order and approval URL }
         '502': { description: Provider error }
@@ -56,7 +67,17 @@ paths:
       summary: Capture an approved PayPal order server side
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 8, maxLength: 128 } }
       responses:
         '200': { description: Verified completed capture }
         '409': { description: Invalid state or incomplete capture }
         '502': { description: Provider outcome could not be confirmed }
+  /api/v1/payments/{id}/refresh:
+    get:
+      summary: Refresh authoritative PayPal order state
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Refreshed provider state }
+        '404': { description: Payment attempt not found }
+        '502': { description: Provider state could not be refreshed }
