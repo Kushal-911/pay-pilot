@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,9 @@ import (
 	"paypilot/internal/payments"
 	"paypilot/internal/paypal"
 )
+
+//go:embed web/index.html web/app.css web/app.js
+var webFiles embed.FS
 
 func main() {
 	dbURL := os.Getenv("DATABASE_URL")
@@ -38,6 +42,15 @@ func main() {
 	}
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
+	r.GET("/", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", mustReadWebFile("web/index.html"))
+	})
+	r.GET("/app.css", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/css; charset=utf-8", mustReadWebFile("web/app.css"))
+	})
+	r.GET("/app.js", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/javascript; charset=utf-8", mustReadWebFile("web/app.js"))
+	})
 	r.GET("/health", func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
@@ -62,4 +75,12 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func mustReadWebFile(name string) []byte {
+	data, err := webFiles.ReadFile(name)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }

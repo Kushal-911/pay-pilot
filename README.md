@@ -2,13 +2,19 @@
 
 PayPilot is an evidence-grounded payment investigation and recovery platform for merchants using PayPal. The initial milestone implements a Go/Gin API, PostgreSQL order persistence, and the PayPal Sandbox checkout/capture server path.
 
+## Merchant workbench
+
+The same Go service serves an embedded, responsive merchant workbench at `http://localhost:8080/`. It includes an interactive, browser-only synthetic payment trace that demonstrates an agent-authorized purchase, an ambiguous capture timeout, delayed completion evidence, and a provider-state check before local reconciliation. The demo is explicitly labeled synthetic and does not call PayPal or move money. **Run the synthetic demo** is the reliable path for a recording without external accounts.
+
+Choose **Live API** to read orders and investigations from the Go API and use PayPal Sandbox checkout, capture, refresh, and the configured investigation model. Live API requires the database and server; Sandbox actions additionally require PayPal Sandbox credentials. No automatic fallback disguises API failures as live data.
+
 ## Run locally
 
 1. Copy `.env.example` to `.env` and set PayPal Sandbox client credentials, checkout return/cancel URLs, and `PAYPAL_WEBHOOK_ID`. To enable model-assisted investigation, also set `OPENAI_API_KEY` and `OPENAI_MODEL`; otherwise reports use deterministic record checks.
 2. Start the database and API with `docker compose up --build`.
-3. Check `GET http://localhost:8080/health`.
-4. Create an order with `POST /api/v1/orders`, then create a PayPal checkout with `POST /api/v1/orders/{id}/paypal-order`.
-5. Open the returned `approval_url` in a browser and approve with a PayPal Sandbox buyer. Capture with `POST /api/v1/payments/{payment_id}/capture`.
+3. Open `http://localhost:8080/` for the workbench and check `GET http://localhost:8080/health`.
+4. To create a real Sandbox checkout, switch the workbench to **Live API** and create an order, or use `POST /api/v1/orders` followed by `POST /api/v1/orders/{id}/paypal-order`.
+5. Open the returned `approval_url` in a browser and approve with a PayPal Sandbox buyer. Capture with the workbench or `POST /api/v1/payments/{payment_id}/capture`.
 
 Example order:
 
@@ -36,5 +42,6 @@ To apply new migrations to an existing local database, apply numbered SQL migrat
 - Current status: `PROJECT_STATUS.md`
 - Decisions: `DECISIONS.md`
 - Session handoff: `HANDOFF.md`
+- Demo recording walkthrough: `DEMO_SCRIPT.md`
 
 The PayPal Sandbox API is not exercised by local tests; configure Sandbox credentials and accounts to complete the provider flow. Never use production credentials in local development.

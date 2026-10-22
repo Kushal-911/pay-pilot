@@ -22,7 +22,7 @@ Status legend: `[x]` verified complete, `[~]` implemented or partially complete 
 - [~] Add provider abstraction and optional OpenAI Responses tool-calling integration (fake API tested; no live credentials).
 - [~] Implement four constrained read-only evidence tools.
 - [~] Persist structured reports with validated evidence references (migration/handler implemented; DB path unverified).
-- [ ] Build basic investigation UI.
+- [~] Build investigation UI with evidence-linked results; browser and persisted API flow pending.
 - Acceptance: backend report and evidence workflow implemented; full persisted discrepancy demo and UI remain unverified.
 
 ## Day 4 — Webhooks and reconciliation (P0)
@@ -33,10 +33,10 @@ Status legend: `[x]` verified complete, `[~]` implemented or partially complete 
 - Acceptance: events update records safely and recommendations cannot bypass backend rules.
 
 ## Day 5 — Product UI (P0/P1)
-- [ ] Complete overview, payments, detail timeline, investigation, and demo screens.
-- [ ] Add filtering and meaningful AG Grid integration if feasible.
-- [ ] Improve loading, empty, and error states.
-- Acceptance: a new user can complete the core workflow without developer assistance.
+- [~] Complete responsive overview, payments, detail timeline, investigation, and guided demo screens in an embedded workbench.
+- [~] Add payment search/filter; AG Grid deferred because the current queue is small and dependency-free.
+- [~] Add loading, empty, error, API-unavailable, and mobile states.
+- Acceptance: synthetic scenario is walkthrough-ready; Live API usability still needs runtime validation.
 
 ## Day 6 — Testing, documentation, deployment (P0/P1)
 - [ ] Add reproducible fixtures and test critical success/failure/timeout/duplicate/discrepancy paths.
