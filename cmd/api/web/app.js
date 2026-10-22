@@ -14,6 +14,7 @@ const state = {
   demoOrders: structuredClone(demoBase),
   liveOrders: [],
   liveSelected: null,
+  captureReadyID: "",
   analysis: null,
   running: false,
   filter: "attention",
@@ -215,12 +216,14 @@ function renderDetail() {
     $("#refresh-label").textContent = "Verify with PayPal";
   } else if (demo && ["verified", "complete"].includes(state.scenario)) {
     $("#refresh-label").textContent = "Provider verified";
-  } else if (!demo && attempt?.status === "created") {
+  } else if (!demo && attempt?.status === "completed") {
+    $("#refresh-label").textContent = "Payment completed";
+  } else if (!demo && attempt?.status === "created" && state.captureReadyID === attempt.id) {
     $("#refresh-label").textContent = "Capture approved payment";
   } else {
-    $("#refresh-label").textContent = demo ? "Verify with PayPal" : "Refresh provider status";
+    $("#refresh-label").textContent = demo ? "Verify with PayPal" : attempt?.status === "created" ? "Check approval with PayPal" : "Refresh provider status";
   }
-  $("#refresh-button").disabled = demo && ["ready", "complete", "verified"].includes(state.scenario) && reference === demoBase[0].id;
+  $("#refresh-button").disabled = (demo && ["ready", "complete", "verified"].includes(state.scenario) && reference === demoBase[0].id) || (!demo && attempt?.status === "completed");
   $("#investigate-button").disabled = false;
 }
 
@@ -424,16 +427,23 @@ async function refreshSelected() {
   const order = selectedOrder();
   const attempt = state.liveSelected?.attempts?.[0];
   if (!order) return;
-  if (attempt?.status === "created") {
+  if (attempt?.status === "created" && state.captureReadyID === attempt.id) {
+    const button = $("#refresh-button");
+    button.disabled = true;
     try {
       const result = await apiRequest(`/api/v1/payments/${encodeURIComponent(attempt.id)}/capture`, { method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() }, body: "{}" });
-      toast(`Capture response: ${result.status || "received"}.`);
+      state.captureReadyID = "";
+      toast(`PayPal capture: ${result.status || "received"}.`);
       await loadLiveOrders();
-      return;
     } catch (error) {
+      state.captureReadyID = "";
       toast(error.message, "error");
-      return;
+      await loadLiveOrders();
+      await loadLiveDetail(order.id);
+    } finally {
+      button.disabled = false;
     }
+    return;
   }
   if (!attempt) {
     toast("Create a PayPal checkout before refreshing provider state.");
@@ -443,7 +453,12 @@ async function refreshSelected() {
   button.disabled = true;
   try {
     const result = await apiRequest(`/api/v1/payments/${encodeURIComponent(attempt.id)}/refresh`);
-    toast(`Provider refresh: ${result.provider_status || result.status || "complete"}.`);
+    state.captureReadyID = result.provider_status === "APPROVED" && result.status === "created" ? attempt.id : "";
+    if (result.provider_status === "APPROVED") {
+      toast("PayPal confirms buyer approval. Capture is now available as a separate action.");
+    } else {
+      toast(`Provider refresh: ${result.provider_status || result.status || "complete"}.`);
+    }
     await loadLiveOrders();
     await loadLiveDetail(order.id);
   } catch (error) {
