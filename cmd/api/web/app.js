@@ -515,8 +515,17 @@ async function runLiveInvestigation() {
       body: JSON.stringify({ order_id: order.id, question: $("#investigation-question").value.trim() || "Did this payment complete, and is it safe to retry?" }),
     });
     const report = result.report || {};
-    const references = (report.evidence || []).slice(0, 4).map((item) => `<span class="evidence-ref">${escapeHTML(item.record_type)}:${escapeHTML(shortId(item.record_id))}</span>`).join(" · ");
-    output.innerHTML = `<strong>${escapeHTML(report.finding || "Investigation complete")}</strong><div>${escapeHTML(report.summary || report.explanation?.text || "The report has no summary.")}<br><br><b>Recommendation:</b> ${escapeHTML(report.recommendation || "manual_review")}<br><b>Confidence:</b> ${Math.round((report.confidence || 0) * 100)}% · ${escapeHTML(report.confidence_explanation || "See evidence references.")}<br><br>${references || "No evidence references returned."}<br><br><span style="color:#8a958b">Source: ${escapeHTML(report.analysis_source || "deterministic")} · model status: ${escapeHTML(report.model_status || "not reported")}</span></div>`;
+    const claimList = (title, claims) => {
+      if (!Array.isArray(claims) || claims.length === 0) return "";
+      const items = claims.map((claim) => {
+        const refs = (claim.evidence_ids || []).map((id) => `<span class="evidence-ref">${escapeHTML(shortId(id))}</span>`).join(" ");
+        return `<li>${escapeHTML(claim.text || "Unspecified claim")}${refs ? `<div class="evidence-links">${refs}</div>` : "<div><em>No evidence reference</em></div>"}</li>`;
+      }).join("");
+      return `<p><b>${title}</b></p><ul>${items}</ul>`;
+    };
+    const unresolved = (report.unresolved_questions || []).map((question) => `<li>${escapeHTML(question)}</li>`).join("");
+    const evidence = (report.evidence || []).slice(0, 8).map((item) => `<span class="evidence-ref">${escapeHTML(item.record_type)}:${escapeHTML(shortId(item.record_id))}</span>`).join(" · ");
+    output.innerHTML = `<strong>${escapeHTML(report.finding || "Investigation complete")}</strong><div>${escapeHTML(report.summary || report.explanation?.text || "The report has no summary.")}${claimList("Confirmed facts", report.confirmed_facts)}${claimList("Hypotheses · unconfirmed", report.hypotheses)}${unresolved ? `<p><b>Still unknown</b></p><ul>${unresolved}</ul>` : ""}<p><b>Recommendation:</b> ${escapeHTML(report.recommendation || "manual_review")}<br><b>Confidence:</b> ${Math.round((report.confidence || 0) * 100)}% · ${escapeHTML(report.confidence_explanation || "See evidence references.")}</p><p><b>Evidence records</b><br>${evidence || "No evidence records returned."}</p><span style="color:#8a958b">Source: ${escapeHTML(report.analysis_source || "deterministic")} · model status: ${escapeHTML(report.model_status || "not reported")}. AI text is explanatory; backend payment state is authoritative.</span></div>`;
     await loadLiveDetail(order.id);
     toast("Investigation saved by the connected PayPilot API.");
   } catch (error) {
