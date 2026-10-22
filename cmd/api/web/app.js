@@ -241,13 +241,33 @@ function renderDetail() {
 
 function renderMetrics() {
   const orders = currentOrders();
+  $("#date-label").textContent = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()).toUpperCase();
   if (state.mode === "demo") {
     const needs = orders.filter((order) => !["paid", "completed"].includes(order.state)).length;
     $("#metric-attention").textContent = String(needs).padStart(2, "0");
     $("#queue-count").textContent = String(ordersForRender().length).padStart(2, "0");
+    $("#metric-attention-note").textContent = "Synthetic sample";
+    $("#metric-attention-caption").textContent = "Demo orders";
+    $("#metric-captured-value").textContent = "$4,280.00";
+    $("#metric-captured-note").textContent = "Synthetic sample";
+    $("#metric-captured-caption").textContent = "Demo data · not provider-calculated";
+    $("#metric-health-value").textContent = "97.4%";
+    $("#metric-health-note").textContent = "Synthetic sample";
+    $("#metric-health-caption").textContent = "Demo data · not provider-calculated";
+    $(".health-chart").hidden = false;
   } else {
     const needs = orders.filter((order) => !["paid", "completed"].includes(String(order.status).toLowerCase())).length;
     $("#metric-attention").textContent = String(needs).padStart(2, "0");
+    $("#queue-count").textContent = String(ordersForRender().length).padStart(2, "0");
+    $("#metric-attention-note").textContent = "From API";
+    $("#metric-attention-caption").textContent = "Loaded orders · maximum 100";
+    $("#metric-captured-value").textContent = "—";
+    $("#metric-captured-note").textContent = "Unavailable";
+    $("#metric-captured-caption").textContent = "No live aggregate endpoint";
+    $("#metric-health-value").textContent = "—";
+    $("#metric-health-note").textContent = "Unavailable";
+    $("#metric-health-caption").textContent = "No live health metric endpoint";
+    $(".health-chart").hidden = true;
   }
 }
 
@@ -615,13 +635,13 @@ function bindEvents() {
     event.preventDefault();
     const view = link.dataset.view;
     if (view === "payments") { state.filter = "all"; renderList(); $("#filter-button").innerHTML = '<svg viewBox="0 0 20 20"><path d="M3 5h14M5.5 10h9M8 15h4"/></svg>All payments <span class="filter-count">×</span>'; }
-    const names = { overview: "Overview", payments: "Payments", investigations: "Investigations", timeline: "Event timeline", integrations: "Integrations", playbook: "Runbook" };
+    const names = { overview: "Overview", payments: "Payments", investigations: "Investigations", timeline: "Event timeline", integrations: "Connection info", playbook: "Runbook" };
     $("#breadcrumb-current").textContent = names[view] || "Overview";
     $$(".nav-link").forEach((item) => item.classList.toggle("active", item === link));
     if (view === "investigations") openDialog("investigation-modal");
     if (view === "timeline") document.querySelector("#detail-card").scrollIntoView({ behavior: "smooth", block: "center" });
     if (view === "integrations") openDialog("help-modal");
-    if (view === "playbook") toast("Runbook: verify provider state before retrying; model output never changes payment state.");
+    if (view === "playbook") openDialog("runbook-modal");
     if (view === "overview") window.scrollTo({ top: 0, behavior: "smooth" });
     if (window.innerWidth <= 640) { $("#sidebar").classList.remove("open"); $(".main-area").classList.remove("menu-open"); }
   }));
