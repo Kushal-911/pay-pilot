@@ -65,6 +65,8 @@ func main() {
 	api.GET("/orders", payments.ListOrders(db))
 	api.GET("/orders/:id", payments.GetOrder(db))
 	api.GET("/orders/:id/payments", payments.ListOrderPayments(db))
+	api.GET("/orders/:id/events", payments.ListOrderEvents(db))
+	api.GET("/orders/:id/events", payments.ListOrderEvents(db))
 	api.POST("/orders/:id/paypal-order", payments.Idempotency(db), payments.CreatePayPalOrder(db, paypalClient))
 	api.POST("/payments/:id/capture", payments.Idempotency(db), payments.CapturePayPalOrder(db, paypalClient))
 	api.GET("/payments/:id/refresh", payments.RefreshPayPalOrder(db, paypalClient))

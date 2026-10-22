@@ -112,13 +112,25 @@ function timelineEvents(order) {
     return events;
   }
   const events = [];
-  if (order.created_at) events.push({ title: "Merchant order created", detail: order.description || "PayPal checkout", time: formatClock(order.created_at), type: "success", ref: shortId(order.id) });
-  const attempt = state.liveSelected?.attempts?.[0];
-  if (attempt) {
-    events.push({ title: `Payment attempt ${attempt.status}`, detail: `PayPal order ${shortId(attempt.paypal_order_id)}`, time: formatClock(attempt.created_at), type: attempt.status === "completed" ? "success" : attempt.status === "unknown" ? "alert" : "current", ref: shortId(attempt.id) });
-    if (attempt.updated_at && attempt.updated_at !== attempt.created_at) events.push({ title: `Attempt updated · ${attempt.status}`, detail: `Capture ${shortId(attempt.paypal_capture_id)}`, time: formatClock(attempt.updated_at), type: attempt.status === "completed" ? "success" : "current", ref: shortId(attempt.paypal_capture_id) });
+  if (order.created_at) events.push({ title: "Merchant order created", detail: order.description || "PayPal checkout", time: formatClock(order.created_at), type: "success", ref: shortId(order.id), timestamp: order.created_at });
+  for (const attempt of state.liveSelected?.attempts || []) {
+    events.push({ title: `Payment attempt ${attempt.status}`, detail: `PayPal order ${shortId(attempt.paypal_order_id)}`, time: formatClock(attempt.created_at), type: attempt.status === "completed" ? "success" : attempt.status === "unknown" ? "alert" : "current", ref: shortId(attempt.id), timestamp: attempt.created_at });
+    if (attempt.updated_at && attempt.updated_at !== attempt.created_at) events.push({ title: `Attempt updated · ${attempt.status}`, detail: `Capture ${shortId(attempt.paypal_capture_id)}`, time: formatClock(attempt.updated_at), type: attempt.status === "completed" ? "success" : "current", ref: shortId(attempt.paypal_capture_id), timestamp: attempt.updated_at });
   }
-  return events.slice(0, 5);
+  for (const event of state.liveSelected?.providerEvents || []) {
+    const amount = event.amount_minor ? ` · ${money(event.amount_minor, event.currency || order.currency || "USD")}` : "";
+    const providerStatus = event.resource_status ? ` · ${event.resource_status}` : "";
+    const processing = event.processing_status === "failed" ? "Not applied; review required" : `Verified · ${event.processing_status}`;
+    events.push({
+      title: `PayPal event · ${event.event_type}`,
+      detail: `${processing}${providerStatus}${amount}`,
+      time: formatClock(event.received_at),
+      type: event.processing_status === "failed" ? "alert" : event.event_type.endsWith("COMPLETED") ? "success" : "current",
+      ref: shortId(event.provider_event_id),
+      timestamp: event.received_at,
+    });
+  }
+  return events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 }
 
 function shortId(value) {
@@ -135,7 +147,7 @@ function formatClock(value) {
 
 function renderTimeline(order) {
   const events = timelineEvents(order);
-  $("#timeline").innerHTML = events.map((event) => `<div class="timeline-event ${event.type}"><span class="event-dot"></span><div class="event-copy"><div class="event-title">${escapeHTML(event.title)}</div><div class="event-detail">${escapeHTML(event.detail)}</div></div><span class="event-time">${escapeHTML(event.time)}</span></div>`).join("") || '<div class="queue-empty">No events recorded yet.</div>';
+  $("#timeline").innerHTML = events.map((event) => `<div class="timeline-event ${event.type}"><span class="event-dot"></span><div class="event-copy"><div class="event-title">${escapeHTML(event.title)}</div><div class="event-detail">${escapeHTML(event.detail)}${event.ref ? ` · ${escapeHTML(event.ref)}` : ""}</div></div><span class="event-time">${escapeHTML(event.time)}</span></div>`).join("") || '<div class="queue-empty">No events recorded yet.</div>';
   $("#timeline-subtitle").textContent = `${events.length} events · latest ${state.mode === "demo" ? (state.scenario === "ready" ? "2 min ago" : "just now") : "from API"}`;
 }
 
@@ -395,17 +407,18 @@ async function loadLiveOrders() {
 async function loadLiveDetail(id) {
   if (!id) return;
   try {
-    const [order, attempts, investigations] = await Promise.all([
+    const [order, attempts, investigations, providerEvents] = await Promise.all([
       apiRequest(`/api/v1/orders/${encodeURIComponent(id)}`),
       apiRequest(`/api/v1/orders/${encodeURIComponent(id)}/payments`),
       apiRequest(`/api/v1/orders/${encodeURIComponent(id)}/investigations`),
+      apiRequest(`/api/v1/orders/${encodeURIComponent(id)}/events`),
     ]);
     let latest = null;
     if (investigations.data?.length) {
       const first = investigations.data[0];
       try { latest = await apiRequest(`/api/v1/investigations/${encodeURIComponent(first.id)}`); } catch { latest = null; }
     }
-    state.liveSelected = { ...order, attempts: attempts.data || [], investigations: investigations.data || [], investigation: latest };
+    state.liveSelected = { ...order, attempts: attempts.data || [], providerEvents: providerEvents.data || [], investigations: investigations.data || [], investigation: latest };
     renderDetail();
   } catch (error) {
     toast(`Could not load payment detail: ${error.message}`, "error");
