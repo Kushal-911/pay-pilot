@@ -13,7 +13,7 @@ This is the durable index for the complete planned lifecycle. V0 is the foundati
 - **UI implementation is substantially present.** Demo and Live API workflows, order queue/detail, payment timeline, investigation view, and new-payment flow exist. That does not make the end-to-end product complete: PostgreSQL/Sandbox/runtime evidence is still required.
 - **Feature work in review:** [PR #9](https://github.com/Kushal-911/pay-pilot/pull/9) is open, unmerged and mergeable at the time of this update. It covers safer payment action semantics, provider event timeline, truthful Live API navigation/metrics, and evidence display for AI findings. Issues #1, #2, #5 and #7 retain the review/verification work.
 - **Unfinished V1 gates:** clean database-backed run; real Sandbox buyer checkout and webhook path; verified safe recovery; API contract synchronization; clean-clone run; owner-confirmed license; submission description; public demo video; final requirements check.
-- **Backlog:** 60 GitHub issues are open in the repo, including this index's original issues #1–#8 and 52 newly created work/epic issues #10–#61. Pull request #9 occupies the number between them.
+- **Backlog:** 61 GitHub issues are open in the repo, including this index's original issues #1–#8 and 53 newly created work/epic issues #10–#62. Pull request #9 occupies the number between them.
 
 ## Phases and completion criteria
 
@@ -28,7 +28,7 @@ This is the durable index for the complete planned lifecycle. V0 is the foundati
 
 ## Priority and sequencing
 
-- **V1 P0 — required before submission:** #1–#4, #6 and #10–#18, #25–#29. #1/#2 have implementation in PR #9; #3/#4 and runtime evidence remain open. Owner-only license and submission actions remain explicit blockers.
+- **V1 P0 — required before submission:** #1–#4, #6 and #10–#18, #25–#29, #62. #1/#2 have implementation in PR #9; #3/#4 and runtime evidence remain open. #62 tracks a duplicate route registration in PR #9 that can prevent startup. Owner-only license and submission actions remain explicit blockers.
 - **V1 P1 — polish/evidence:** #5, #7, #19–#24 and #30–#31. Confirm the live journey, model failure behavior, accessibility/responsive behavior, synthetic demo repeatability, user observations where feasible, and current event rules.
 - **V2 — after V1 only:** #32–#36. Hosted demo must be synthetic/read-only and isolated.
 - **V3 — production path:** #37–#57. These tasks address the current local prototype's lack of authentication/tenant isolation and add payment operations, privacy, reliability and security controls.
@@ -71,6 +71,7 @@ Issues are not assigned to a person because no confirmed assignee mapping was pr
 - [#29 — [V1][P0][submission] Record and review the public demo under three minutes](https://github.com/Kushal-911/pay-pilot/issues/29)
 - [#30 — [V1][P1][research] Run lightweight operator usability sessions](https://github.com/Kushal-911/pay-pilot/issues/30)
 - [#31 — [V1][P1][research] Recheck hackathon rules, gallery, and sponsor criteria before submission](https://github.com/Kushal-911/pay-pilot/issues/31)
+- [#62 — [V1][P0][bug] Remove duplicate provider-event route registration](https://github.com/Kushal-911/pay-pilot/issues/62)
 
 ## V2 — Hosted judge demo and validated polish
 
