@@ -24,7 +24,7 @@ Example order:
 
 `amount_minor` is an integer in the currency's minor unit. This initial implementation formats PayPal amounts with two decimal places, so use two-decimal currencies (for example USD) until currency exponent handling is expanded.
 
-PostgreSQL initialization runs the numbered SQL files in `migrations/` on first creation of the Compose volume. Every mutation endpoint requires an `Idempotency-Key` header (8–128 characters); repeating the same key and request returns the stored response, while reusing it with a different request returns `409`. Capture outcomes that cannot be confirmed are stored as `unknown`; call the refresh endpoint to retrieve the authoritative PayPal state before retrying.
+PostgreSQL initialization runs the numbered SQL files in `migrations/` on first creation of the Compose volume. Every mutation endpoint requires an `Idempotency-Key` header (8–128 characters); repeating the same key and request returns the stored response, while reusing it with a different request returns `409`. Capture outcomes that cannot be confirmed are stored as `unknown`; call the refresh endpoint to retrieve the authoritative PayPal state before retrying. `GET /api/v1/orders/{id}/events` returns the selected order’s sanitized PayPal event history in received-time order, including processing status and correlation fields without raw webhook payloads.
 
 To investigate an order, call `POST /api/v1/investigations` with an `order_id` and question, then inspect the persisted report and record-linked evidence. The report always includes deterministic cross-record checks. If OpenAI configuration is present, the Responses API can call four read-only evidence functions; its output is shown only after its evidence IDs and report fields validate. Provider errors or invalid output fall back to a labeled deterministic report. The investigation does not execute payment actions.
 
@@ -38,6 +38,8 @@ To apply new migrations to an existing local database, apply numbered SQL migrat
 
 - OpenAPI: `openapi.yaml`
 - Postman: `postman/PayPilot.postman_collection.json`
+
+Import the Postman collection and set `baseUrl` to your local API. Send **Health**, **Create order**, then **List orders**, **List payment attempts**, and **List provider events**. The collection creates a run ID and saves the created `orderId`; clear its `runId` variable to create a fresh synthetic order. The PayPal order, capture, and webhook requests require Sandbox configuration and a buyer-approved order. Never capture an order before buyer approval; after an uncertain capture, call **Refresh payment** before considering another capture. The collection contains no credentials.
 - Milestones: `ROADMAP.md`
 - Current status: `PROJECT_STATUS.md`
 - Decisions: `DECISIONS.md`

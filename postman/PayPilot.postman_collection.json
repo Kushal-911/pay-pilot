@@ -1,24 +1,26 @@
 {
-  "info": {
-    "name": "PayPilot API flows",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
+  "info": {"name": "PayPilot API flows","schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json","description": "Local/API smoke sequence: Health → Create order → List orders → List payment attempts → List provider events. PayPal checkout, capture, and webhooks require Sandbox configuration; capture only after buyer approval, and refresh after an ambiguous outcome. Clear the runId collection variable to start with a new unique order. No credentials are stored in this collection."},
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "orderId", "value": "" },
-    { "key": "paymentId", "value": "" },
-    { "key": "investigationId", "value": "" }
+    {"key": "baseUrl","value": "http://localhost:8080"},
+    {"key": "orderId","value": ""},
+    {"key": "paymentId","value": ""},
+    {"key": "investigationId","value": ""},
+    {"key": "runId","value": ""}
   ],
   "item": [
-    { "name": "Health", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
-    { "name": "Create order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Idempotency-Key", "value": "demo-order-0001" }], "body": { "mode": "raw", "raw": "{\"merchant_reference\":\"demo-001\",\"amount_minor\":2500,\"currency\":\"USD\",\"description\":\"Demo order\"}" }, "url": "{{baseUrl}}/api/v1/orders" } },
-    { "name": "List orders", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders" } },
-    { "name": "Get order", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}" } },
-    { "name": "List payment attempts", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/payments" } },
-    { "name": "Create PayPal order", "request": { "method": "POST", "header": [{ "key": "Idempotency-Key", "value": "demo-checkout-0001" }], "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/paypal-order" } },
-    { "name": "Refresh payment", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/refresh" } },
-    { "name": "Capture approved payment", "request": { "method": "POST", "header": [{ "key": "Idempotency-Key", "value": "demo-capture-0001" }], "url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture" } },
-    { "name": "Investigate order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Idempotency-Key", "value": "demo-investigation-001" }], "body": { "mode": "raw", "raw": "{\"order_id\":\"{{orderId}}\",\"question\":\"Why does this order show pending?\"}" }, "url": "{{baseUrl}}/api/v1/investigations" } },
-    { "name": "Get investigation", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/investigations/{{investigationId}}" } }
+    {"name": "Health","request": {"method": "GET","url": "{{baseUrl}}/health"}},
+    {"name": "Create order","request": {"method": "POST","header": [{"key": "Content-Type","value": "application/json"},{"key": "Idempotency-Key","value": "order-{{runId}}"}],"body": {"mode": "raw","raw": "{\"merchant_reference\":\"demo-{{runId}}\",\"amount_minor\":2500,\"currency\":\"USD\",\"description\":\"Synthetic PayPilot demo order\"}"},"url": "{{baseUrl}}/api/v1/orders"},"event": [{"listen": "test","script": {"type": "text/javascript","exec": ["if (pm.response.code === 201) pm.collectionVariables.set('orderId', pm.response.json().id);"],"packages": {}}}]},
+    {"name": "List orders","request": {"method": "GET","url": "{{baseUrl}}/api/v1/orders"}},
+    {"name": "Get order","request": {"method": "GET","url": "{{baseUrl}}/api/v1/orders/{{orderId}}"}},
+    {"name": "List payment attempts","request": {"method": "GET","url": "{{baseUrl}}/api/v1/orders/{{orderId}}/payments"}},
+    {"name": "List provider events","request": {"method": "GET","description": "Returns sanitized, order-scoped PayPal event history. The data array may be empty. Raw webhook bodies and secrets are never returned.","url": "{{baseUrl}}/api/v1/orders/{{orderId}}/events"}},
+    {"name": "Create PayPal order","request": {"method": "POST","header": [{"key": "Idempotency-Key","value": "checkout-{{runId}}"}],"url": "{{baseUrl}}/api/v1/orders/{{orderId}}/paypal-order"},"event": [{"listen": "test","script": {"type": "text/javascript","exec": ["if (pm.response.code === 201) pm.collectionVariables.set('paymentId', pm.response.json().payment_id);"],"packages": {}}}]},
+    {"name": "Refresh payment","request": {"method": "GET","url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/refresh"}},
+    {"name": "Capture approved payment","request": {"method": "POST","header": [{"key": "Idempotency-Key","value": "capture-{{runId}}"}],"url": "{{baseUrl}}/api/v1/payments/{{paymentId}}/capture"}},
+    {"name": "Investigate order","request": {"method": "POST","header": [{"key": "Content-Type","value": "application/json"},{"key": "Idempotency-Key","value": "investigate-{{runId}}"}],"body": {"mode": "raw","raw": "{\"order_id\":\"{{orderId}}\",\"question\":\"Why does this order show pending?\"}"},"url": "{{baseUrl}}/api/v1/investigations"}},
+    {"name": "Get investigation","request": {"method": "GET","url": "{{baseUrl}}/api/v1/investigations/{{investigationId}}"}}
+  ],
+  "event": [
+    {"listen": "prerequest","script": {"type": "text/javascript","exec": ["if (!pm.collectionVariables.get('runId')) pm.collectionVariables.set('runId', pm.variables.replaceIn('{{$guid}}'));"],"packages": {}}}
   ]
 }
