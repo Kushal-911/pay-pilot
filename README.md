@@ -16,6 +16,14 @@ Choose **Live API** to read orders and investigations from the Go API and use Pa
 4. To create a real Sandbox checkout, switch the workbench to **Live API** and create an order, or use `POST /api/v1/orders` followed by `POST /api/v1/orders/{id}/paypal-order`.
 5. Open the returned `approval_url` in a browser and approve with a PayPal Sandbox buyer. Capture with the workbench or `POST /api/v1/payments/{payment_id}/capture`.
 
+### Configure PayPal Sandbox
+
+1. Sign in to the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/), switch to Sandbox, and open **Apps & Credentials**. Create a Sandbox app using a business Sandbox account, then copy its Client ID and secret into `.env` as `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`.
+2. Under **Testing Tools → Sandbox Accounts**, use a personal account as the buyer and the business account as the seller. Open the checkout `approval_url` in a browser and sign in with the personal Sandbox credentials. PayPal's [Sandbox account guide](https://developer.paypal.com/sandbox-testing/accounts) describes how to find or create these test accounts.
+3. For webhook verification, expose the local API at a reachable HTTPS URL, add `<https-url>/api/v1/webhooks/paypal` to the Sandbox app's webhooks, and subscribe to `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.PENDING`, and `PAYMENT.CAPTURE.DENIED`. Save the registered webhook ID as `PAYPAL_WEBHOOK_ID` and restart the API. See PayPal's [webhook integration guide](https://developer.paypal.com/api/rest/webhooks/rest/).
+
+Use Sandbox credentials and test accounts only. Keep `.env` out of version control, and never paste secrets into issues, logs, or the Postman collection.
+
 Example order:
 
 ```json
