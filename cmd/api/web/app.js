@@ -14,6 +14,7 @@ const state = {
   demoOrders: structuredClone(demoBase),
   liveOrders: [],
   liveSelected: null,
+  captureReadyID: "",
   analysis: null,
   running: false,
   filter: "attention",
@@ -111,13 +112,25 @@ function timelineEvents(order) {
     return events;
   }
   const events = [];
-  if (order.created_at) events.push({ title: "Merchant order created", detail: order.description || "PayPal checkout", time: formatClock(order.created_at), type: "success", ref: shortId(order.id) });
-  const attempt = state.liveSelected?.attempts?.[0];
-  if (attempt) {
-    events.push({ title: `Payment attempt ${attempt.status}`, detail: `PayPal order ${shortId(attempt.paypal_order_id)}`, time: formatClock(attempt.created_at), type: attempt.status === "completed" ? "success" : attempt.status === "unknown" ? "alert" : "current", ref: shortId(attempt.id) });
-    if (attempt.updated_at && attempt.updated_at !== attempt.created_at) events.push({ title: `Attempt updated · ${attempt.status}`, detail: `Capture ${shortId(attempt.paypal_capture_id)}`, time: formatClock(attempt.updated_at), type: attempt.status === "completed" ? "success" : "current", ref: shortId(attempt.paypal_capture_id) });
+  if (order.created_at) events.push({ title: "Merchant order created", detail: order.description || "PayPal checkout", time: formatClock(order.created_at), type: "success", ref: shortId(order.id), timestamp: order.created_at });
+  for (const attempt of state.liveSelected?.attempts || []) {
+    events.push({ title: `Payment attempt ${attempt.status}`, detail: `PayPal order ${shortId(attempt.paypal_order_id)}`, time: formatClock(attempt.created_at), type: attempt.status === "completed" ? "success" : attempt.status === "unknown" ? "alert" : "current", ref: shortId(attempt.id), timestamp: attempt.created_at });
+    if (attempt.updated_at && attempt.updated_at !== attempt.created_at) events.push({ title: `Attempt updated · ${attempt.status}`, detail: `Capture ${shortId(attempt.paypal_capture_id)}`, time: formatClock(attempt.updated_at), type: attempt.status === "completed" ? "success" : "current", ref: shortId(attempt.paypal_capture_id), timestamp: attempt.updated_at });
   }
-  return events.slice(0, 5);
+  for (const event of state.liveSelected?.providerEvents || []) {
+    const amount = event.amount_minor ? ` · ${money(event.amount_minor, event.currency || order.currency || "USD")}` : "";
+    const providerStatus = event.resource_status ? ` · ${event.resource_status}` : "";
+    const processing = event.processing_status === "failed" ? "Not applied; review required" : `Verified · ${event.processing_status}`;
+    events.push({
+      title: `PayPal event · ${event.event_type}`,
+      detail: `${processing}${providerStatus}${amount}`,
+      time: formatClock(event.received_at),
+      type: event.processing_status === "failed" ? "alert" : event.event_type.endsWith("COMPLETED") ? "success" : "current",
+      ref: shortId(event.provider_event_id),
+      timestamp: event.received_at,
+    });
+  }
+  return events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 }
 
 function shortId(value) {
@@ -134,7 +147,7 @@ function formatClock(value) {
 
 function renderTimeline(order) {
   const events = timelineEvents(order);
-  $("#timeline").innerHTML = events.map((event) => `<div class="timeline-event ${event.type}"><span class="event-dot"></span><div class="event-copy"><div class="event-title">${escapeHTML(event.title)}</div><div class="event-detail">${escapeHTML(event.detail)}</div></div><span class="event-time">${escapeHTML(event.time)}</span></div>`).join("") || '<div class="queue-empty">No events recorded yet.</div>';
+  $("#timeline").innerHTML = events.map((event) => `<div class="timeline-event ${event.type}"><span class="event-dot"></span><div class="event-copy"><div class="event-title">${escapeHTML(event.title)}</div><div class="event-detail">${escapeHTML(event.detail)}${event.ref ? ` · ${escapeHTML(event.ref)}` : ""}</div></div><span class="event-time">${escapeHTML(event.time)}</span></div>`).join("") || '<div class="queue-empty">No events recorded yet.</div>';
   $("#timeline-subtitle").textContent = `${events.length} events · latest ${state.mode === "demo" ? (state.scenario === "ready" ? "2 min ago" : "just now") : "from API"}`;
 }
 
@@ -215,24 +228,46 @@ function renderDetail() {
     $("#refresh-label").textContent = "Verify with PayPal";
   } else if (demo && ["verified", "complete"].includes(state.scenario)) {
     $("#refresh-label").textContent = "Provider verified";
-  } else if (!demo && attempt?.status === "created") {
+  } else if (!demo && attempt?.status === "completed") {
+    $("#refresh-label").textContent = "Payment completed";
+  } else if (!demo && attempt?.status === "created" && state.captureReadyID === attempt.id) {
     $("#refresh-label").textContent = "Capture approved payment";
   } else {
-    $("#refresh-label").textContent = demo ? "Verify with PayPal" : "Refresh provider status";
+    $("#refresh-label").textContent = demo ? "Verify with PayPal" : attempt?.status === "created" ? "Check approval with PayPal" : "Refresh provider status";
   }
-  $("#refresh-button").disabled = demo && ["ready", "complete", "verified"].includes(state.scenario) && reference === demoBase[0].id;
+  $("#refresh-button").disabled = (demo && ["ready", "complete", "verified"].includes(state.scenario) && reference === demoBase[0].id) || (!demo && attempt?.status === "completed");
   $("#investigate-button").disabled = false;
 }
 
 function renderMetrics() {
   const orders = currentOrders();
+  $("#date-label").textContent = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()).toUpperCase();
   if (state.mode === "demo") {
     const needs = orders.filter((order) => !["paid", "completed"].includes(order.state)).length;
     $("#metric-attention").textContent = String(needs).padStart(2, "0");
     $("#queue-count").textContent = String(ordersForRender().length).padStart(2, "0");
+    $("#metric-attention-note").textContent = "Synthetic sample";
+    $("#metric-attention-caption").textContent = "Demo orders";
+    $("#metric-captured-value").textContent = "$4,280.00";
+    $("#metric-captured-note").textContent = "Synthetic sample";
+    $("#metric-captured-caption").textContent = "Demo data · not provider-calculated";
+    $("#metric-health-value").textContent = "97.4%";
+    $("#metric-health-note").textContent = "Synthetic sample";
+    $("#metric-health-caption").textContent = "Demo data · not provider-calculated";
+    $(".health-chart").hidden = false;
   } else {
     const needs = orders.filter((order) => !["paid", "completed"].includes(String(order.status).toLowerCase())).length;
     $("#metric-attention").textContent = String(needs).padStart(2, "0");
+    $("#queue-count").textContent = String(ordersForRender().length).padStart(2, "0");
+    $("#metric-attention-note").textContent = "From API";
+    $("#metric-attention-caption").textContent = "Loaded orders · maximum 100";
+    $("#metric-captured-value").textContent = "—";
+    $("#metric-captured-note").textContent = "Unavailable";
+    $("#metric-captured-caption").textContent = "No live aggregate endpoint";
+    $("#metric-health-value").textContent = "—";
+    $("#metric-health-note").textContent = "Unavailable";
+    $("#metric-health-caption").textContent = "No live health metric endpoint";
+    $(".health-chart").hidden = true;
   }
 }
 
@@ -392,17 +427,18 @@ async function loadLiveOrders() {
 async function loadLiveDetail(id) {
   if (!id) return;
   try {
-    const [order, attempts, investigations] = await Promise.all([
+    const [order, attempts, investigations, providerEvents] = await Promise.all([
       apiRequest(`/api/v1/orders/${encodeURIComponent(id)}`),
       apiRequest(`/api/v1/orders/${encodeURIComponent(id)}/payments`),
       apiRequest(`/api/v1/orders/${encodeURIComponent(id)}/investigations`),
+      apiRequest(`/api/v1/orders/${encodeURIComponent(id)}/events`),
     ]);
     let latest = null;
     if (investigations.data?.length) {
       const first = investigations.data[0];
       try { latest = await apiRequest(`/api/v1/investigations/${encodeURIComponent(first.id)}`); } catch { latest = null; }
     }
-    state.liveSelected = { ...order, attempts: attempts.data || [], investigations: investigations.data || [], investigation: latest };
+    state.liveSelected = { ...order, attempts: attempts.data || [], providerEvents: providerEvents.data || [], investigations: investigations.data || [], investigation: latest };
     renderDetail();
   } catch (error) {
     toast(`Could not load payment detail: ${error.message}`, "error");
@@ -424,16 +460,23 @@ async function refreshSelected() {
   const order = selectedOrder();
   const attempt = state.liveSelected?.attempts?.[0];
   if (!order) return;
-  if (attempt?.status === "created") {
+  if (attempt?.status === "created" && state.captureReadyID === attempt.id) {
+    const button = $("#refresh-button");
+    button.disabled = true;
     try {
       const result = await apiRequest(`/api/v1/payments/${encodeURIComponent(attempt.id)}/capture`, { method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() }, body: "{}" });
-      toast(`Capture response: ${result.status || "received"}.`);
+      state.captureReadyID = "";
+      toast(`PayPal capture: ${result.status || "received"}.`);
       await loadLiveOrders();
-      return;
     } catch (error) {
+      state.captureReadyID = "";
       toast(error.message, "error");
-      return;
+      await loadLiveOrders();
+      await loadLiveDetail(order.id);
+    } finally {
+      button.disabled = false;
     }
+    return;
   }
   if (!attempt) {
     toast("Create a PayPal checkout before refreshing provider state.");
@@ -443,7 +486,12 @@ async function refreshSelected() {
   button.disabled = true;
   try {
     const result = await apiRequest(`/api/v1/payments/${encodeURIComponent(attempt.id)}/refresh`);
-    toast(`Provider refresh: ${result.provider_status || result.status || "complete"}.`);
+    state.captureReadyID = result.provider_status === "APPROVED" && result.status === "created" ? attempt.id : "";
+    if (result.provider_status === "APPROVED") {
+      toast("PayPal confirms buyer approval. Capture is now available as a separate action.");
+    } else {
+      toast(`Provider refresh: ${result.provider_status || result.status || "complete"}.`);
+    }
     await loadLiveOrders();
     await loadLiveDetail(order.id);
   } catch (error) {
@@ -467,8 +515,17 @@ async function runLiveInvestigation() {
       body: JSON.stringify({ order_id: order.id, question: $("#investigation-question").value.trim() || "Did this payment complete, and is it safe to retry?" }),
     });
     const report = result.report || {};
-    const references = (report.evidence || []).slice(0, 4).map((item) => `<span class="evidence-ref">${escapeHTML(item.record_type)}:${escapeHTML(shortId(item.record_id))}</span>`).join(" · ");
-    output.innerHTML = `<strong>${escapeHTML(report.finding || "Investigation complete")}</strong><div>${escapeHTML(report.summary || report.explanation?.text || "The report has no summary.")}<br><br><b>Recommendation:</b> ${escapeHTML(report.recommendation || "manual_review")}<br><b>Confidence:</b> ${Math.round((report.confidence || 0) * 100)}% · ${escapeHTML(report.confidence_explanation || "See evidence references.")}<br><br>${references || "No evidence references returned."}<br><br><span style="color:#8a958b">Source: ${escapeHTML(report.analysis_source || "deterministic")} · model status: ${escapeHTML(report.model_status || "not reported")}</span></div>`;
+    const claimList = (title, claims) => {
+      if (!Array.isArray(claims) || claims.length === 0) return "";
+      const items = claims.map((claim) => {
+        const refs = (claim.evidence_ids || []).map((id) => `<span class="evidence-ref">${escapeHTML(shortId(id))}</span>`).join(" ");
+        return `<li>${escapeHTML(claim.text || "Unspecified claim")}${refs ? `<div class="evidence-links">${refs}</div>` : "<div><em>No evidence reference</em></div>"}</li>`;
+      }).join("");
+      return `<p><b>${title}</b></p><ul>${items}</ul>`;
+    };
+    const unresolved = (report.unresolved_questions || []).map((question) => `<li>${escapeHTML(question)}</li>`).join("");
+    const evidence = (report.evidence || []).slice(0, 8).map((item) => `<span class="evidence-ref">${escapeHTML(item.record_type)}:${escapeHTML(shortId(item.record_id))}</span>`).join(" · ");
+    output.innerHTML = `<strong>${escapeHTML(report.finding || "Investigation complete")}</strong><div>${escapeHTML(report.summary || report.explanation?.text || "The report has no summary.")}${claimList("Confirmed facts", report.confirmed_facts)}${claimList("Hypotheses · unconfirmed", report.hypotheses)}${unresolved ? `<p><b>Still unknown</b></p><ul>${unresolved}</ul>` : ""}<p><b>Recommendation:</b> ${escapeHTML(report.recommendation || "manual_review")}<br><b>Confidence:</b> ${Math.round((report.confidence || 0) * 100)}% · ${escapeHTML(report.confidence_explanation || "See evidence references.")}</p><p><b>Evidence records</b><br>${evidence || "No evidence records returned."}</p><span style="color:#8a958b">Source: ${escapeHTML(report.analysis_source || "deterministic")} · model status: ${escapeHTML(report.model_status || "not reported")}. AI text is explanatory; backend payment state is authoritative.</span></div>`;
     await loadLiveDetail(order.id);
     toast("Investigation saved by the connected PayPilot API.");
   } catch (error) {
@@ -587,13 +644,13 @@ function bindEvents() {
     event.preventDefault();
     const view = link.dataset.view;
     if (view === "payments") { state.filter = "all"; renderList(); $("#filter-button").innerHTML = '<svg viewBox="0 0 20 20"><path d="M3 5h14M5.5 10h9M8 15h4"/></svg>All payments <span class="filter-count">×</span>'; }
-    const names = { overview: "Overview", payments: "Payments", investigations: "Investigations", timeline: "Event timeline", integrations: "Integrations", playbook: "Runbook" };
+    const names = { overview: "Overview", payments: "Payments", investigations: "Investigations", timeline: "Event timeline", integrations: "Connection info", playbook: "Runbook" };
     $("#breadcrumb-current").textContent = names[view] || "Overview";
     $$(".nav-link").forEach((item) => item.classList.toggle("active", item === link));
     if (view === "investigations") openDialog("investigation-modal");
     if (view === "timeline") document.querySelector("#detail-card").scrollIntoView({ behavior: "smooth", block: "center" });
     if (view === "integrations") openDialog("help-modal");
-    if (view === "playbook") toast("Runbook: verify provider state before retrying; model output never changes payment state.");
+    if (view === "playbook") openDialog("runbook-modal");
     if (view === "overview") window.scrollTo({ top: 0, behavior: "smooth" });
     if (window.innerWidth <= 640) { $("#sidebar").classList.remove("open"); $(".main-area").classList.remove("menu-open"); }
   }));

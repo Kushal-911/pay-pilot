@@ -177,8 +177,9 @@ func CapturePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 		defer cancel()
-		var id, orderID, status string
-		err := db.QueryRow(ctx, `SELECT id,paypal_order_id,status FROM payment_attempts WHERE id=$1`, c.Param("id")).Scan(&id, &orderID, &status)
+		var id, orderID, status, currency string
+		var expectedAmount int64
+		err := db.QueryRow(ctx, `SELECT id,paypal_order_id,status,amount_minor,currency FROM payment_attempts WHERE id=$1`, c.Param("id")).Scan(&id, &orderID, &status, &expectedAmount, &currency)
 		if errors.Is(err, pgx.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"code": "not_found", "message": "Payment attempt not found"}})
 			return
@@ -213,13 +214,24 @@ func CapturePayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 			return
 		}
 		captureID, captureStatus := "", ""
+		var captureAmount paypal.Money
 		if len(result.PurchaseUnits) > 0 && len(result.PurchaseUnits[0].Payments.Captures) > 0 {
-			captureID = result.PurchaseUnits[0].Payments.Captures[0].ID
-			captureStatus = result.PurchaseUnits[0].Payments.Captures[0].Status
+			capture := result.PurchaseUnits[0].Payments.Captures[0]
+			captureID = capture.ID
+			captureStatus = capture.Status
+			captureAmount = capture.Amount
 		}
 		if result.Status != "COMPLETED" || captureStatus != "COMPLETED" || captureID == "" {
 			_, _ = db.Exec(ctx, `UPDATE payment_attempts SET status='unknown',updated_at=now() WHERE id=$1 AND status='capturing'`, id)
 			c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"code": "capture_incomplete", "message": "PayPal did not confirm a completed capture; refresh provider state before retrying"}, "provider_status": result.Status})
+			return
+		}
+		if !providerCaptureMatches(captureAmount, expectedAmount, currency) {
+			if err := markPaymentReviewRequired(ctx, db, id); err != nil {
+				databaseError(c)
+				return
+			}
+			c.JSON(http.StatusConflict, gin.H{"error": gin.H{"code": "capture_mismatch", "message": "PayPal capture amount or currency does not match the order; payment is held for review and must not be retried"}, "provider_status": result.Status, "paypal_capture_id": captureID})
 			return
 		}
 		tx, err := db.Begin(ctx)
@@ -248,8 +260,9 @@ func RefreshPayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
 		defer cancel()
-		var id, orderID, status string
-		err := db.QueryRow(ctx, `SELECT id,paypal_order_id,status FROM payment_attempts WHERE id=$1`, c.Param("id")).Scan(&id, &orderID, &status)
+		var id, orderID, status, currency string
+		var expectedAmount int64
+		err := db.QueryRow(ctx, `SELECT id,paypal_order_id,status,amount_minor,currency FROM payment_attempts WHERE id=$1`, c.Param("id")).Scan(&id, &orderID, &status, &expectedAmount, &currency)
 		if errors.Is(err, pgx.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"code": "not_found", "message": "Payment attempt not found"}})
 			return
@@ -264,11 +277,23 @@ func RefreshPayPalOrder(db *pgxpool.Pool, client *paypal.Client) gin.HandlerFunc
 			return
 		}
 		captureID, captureStatus := "", ""
+		var captureAmount paypal.Money
 		if len(result.PurchaseUnits) > 0 && len(result.PurchaseUnits[0].Payments.Captures) > 0 {
-			captureID = result.PurchaseUnits[0].Payments.Captures[0].ID
-			captureStatus = result.PurchaseUnits[0].Payments.Captures[0].Status
+			capture := result.PurchaseUnits[0].Payments.Captures[0]
+			captureID = capture.ID
+			captureStatus = capture.Status
+			captureAmount = capture.Amount
 		}
 		if result.Status == "COMPLETED" && captureID != "" && captureStatus == "COMPLETED" {
+			if !providerCaptureMatches(captureAmount, expectedAmount, currency) {
+				if err := markPaymentReviewRequired(ctx, db, id); err != nil {
+					databaseError(c)
+					return
+				}
+				status = "unknown"
+				c.JSON(http.StatusOK, gin.H{"payment_id": id, "paypal_order_id": orderID, "paypal_capture_id": captureID, "provider_status": result.Status, "status": status, "review_required": true, "message": "PayPal capture amount or currency does not match the order; manual review is required"})
+				return
+			}
 			tx, err := db.Begin(ctx)
 			if err != nil {
 				databaseError(c)
