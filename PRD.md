@@ -70,7 +70,7 @@ This list separates code from external integration evidence. `PROJECT_STATUS.md`
 - Better queue sorting/search and age/status filters if current UI is insufficient.
 - One optional sponsor integration (AG Grid or APIMatic) only if it materially improves operator workflow and its prize criteria are met.
 - Lightweight user validation and usability measures; improve labels based on findings.
-- More robust migration/seed instructions and a repeatable scripted demo reset.
+- Repeatable database seeding for a future isolated hosted demo, beyond the existing browser-local synthetic scenario reset.
 
 ### Explicitly out of scope for this submission
 
