@@ -1,0 +1,98 @@
+name: Quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-and-unit:
+    name: Static checks and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Go formatting
+        run: test -z "$(gofmt -l $(git ls-files '*.go'))"
+      - name: Vet Go packages
+        run: go vet ./...
+      - name: Build API
+        run: go build ./cmd/api
+      - name: Test packages without database integration
+        run: go test ./cmd/... ./internal/investigations/... ./internal/paypal/...
+      - name: Check workbench JavaScript syntax
+        run: node --check cmd/api/web/app.js
+      - name: Validate OpenAPI YAML structure
+        run: |
+          ruby -e 'require "yaml"; doc = YAML.safe_load(File.read("openapi.yaml"), aliases: true); abort "missing OpenAPI 3 document" unless doc.is_a?(Hash) && doc["openapi"].to_s.start_with?("3.") && doc["paths"].is_a?(Hash) && !doc["paths"].empty?'
+      - name: Check migration names and ordering
+        run: |
+          files=(migrations/[0-9][0-9][0-9]_*.sql)
+          test -e "${files[0]}"
+          expected=1
+          for file in "${files[@]}"; do
+            number=$((10#$(basename "$file" | cut -d_ -f1)))
+            test "$number" -eq "$expected" || { echo "Expected migration $expected, found $file"; exit 1; }
+            test -s "$file"
+            expected=$((expected + 1))
+          done
+      - name: Verify Go module checksums
+        run: go mod verify
+      - name: Scan reachable Go code for known vulnerabilities
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...
+      - name: Check dependency license policy
+        run: |
+          go install github.com/google/go-licenses/v2@v1.6.0
+          "$(go env GOPATH)/bin/go-licenses" check --disallowed_types=restricted,reciprocal,forbidden,unknown ./...
+
+  postgres-integration:
+    name: PostgreSQL migrations and integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: paypilot
+          POSTGRES_PASSWORD: paypilot_test_local
+          POSTGRES_DB: paypilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U paypilot -d paypilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://paypilot:paypilot_test_local@127.0.0.1:5432/paypilot?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+      - name: Apply every numbered migration to a fresh database
+        run: |
+          for file in migrations/[0-9][0-9][0-9]_*.sql; do
+            echo "Applying $file"
+            psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+      - name: Run the full suite with PostgreSQL integration enabled
+        run: go test ./...
