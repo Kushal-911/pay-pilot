@@ -17,21 +17,34 @@ func TestOrderLifecyclePersistsAcrossPostgresHandlers(t *testing.T) {
 	db := newPostgresTestSchema(t)
 	t.Setenv("PAYPAL_RETURN_URL", "http://localhost/return")
 	t.Setenv("PAYPAL_CANCEL_URL", "http://localhost/cancel")
+	captureFails := false
+	refreshApproved := false
+	captureRequests := 0
 	paypalClient := paypal.New("https://paypal.test", "client", "secret", &http.Client{Transport: webhookRoundTripper(func(r *http.Request) (*http.Response, error) {
 		body := `{"access_token":"token"}`
+		statusCode := http.StatusOK
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/v1/oauth2/token"):
 			// Return the OAuth token response above.
 		case strings.HasSuffix(r.URL.Path, "/v2/checkout/orders") && r.Method == http.MethodPost:
 			body = `{"id":"PAYPAL-LIFECYCLE-ORDER","status":"APPROVED","links":[{"rel":"approve","href":"https://paypal.test/approve"}]}`
 		case strings.HasSuffix(r.URL.Path, "/capture"):
+			captureRequests++
+			if captureFails {
+				return &http.Response{StatusCode: http.StatusBadGateway, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"name":"TIMEOUT"}`)), Request: r}, nil
+			}
+			statusCode = http.StatusCreated
 			body = `{"id":"PAYPAL-LIFECYCLE-ORDER","status":"COMPLETED","purchase_units":[{"amount":{"currency_code":"USD","value":"25.00"},"payments":{"captures":[{"id":"PAYPAL-LIFECYCLE-CAPTURE","status":"COMPLETED","amount":{"currency_code":"USD","value":"25.00"}}]}}]}`
 		case strings.HasSuffix(r.URL.Path, "/v2/checkout/orders/PAYPAL-LIFECYCLE-ORDER"):
+			if refreshApproved {
+				body = `{"id":"PAYPAL-LIFECYCLE-ORDER","status":"APPROVED"}`
+				break
+			}
 			body = `{"id":"PAYPAL-LIFECYCLE-ORDER","status":"COMPLETED","purchase_units":[{"amount":{"currency_code":"USD","value":"25.00"},"payments":{"captures":[{"id":"PAYPAL-LIFECYCLE-CAPTURE","status":"COMPLETED","amount":{"currency_code":"USD","value":"25.00"}}]}}]}`
 		default:
 			return nil, io.ErrUnexpectedEOF
 		}
-		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
+		return &http.Response{StatusCode: statusCode, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
 	})})
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -82,9 +95,31 @@ func TestOrderLifecyclePersistsAcrossPostgresHandlers(t *testing.T) {
 		ID string `json:"payment_id"`
 	}
 	decode(createdAttempt, &attempt)
+	captureFails = true
+	uncertainCapture := request(http.MethodPost, "/api/v1/payments/"+attempt.ID+"/capture", `{}`, "lifecycle-capture-timeout")
+	if uncertainCapture.Code != http.StatusBadGateway || !strings.Contains(uncertainCapture.Body.String(), "refresh provider state before retrying") {
+		t.Fatalf("uncertain capture response = %d %s", uncertainCapture.Code, uncertainCapture.Body)
+	}
+	var attemptStatus string
+	if err := db.QueryRow(t.Context(), `SELECT status FROM payment_attempts WHERE id=$1`, attempt.ID).Scan(&attemptStatus); err != nil || attemptStatus != "unknown" {
+		t.Fatalf("uncertain capture persisted status = %q, err = %v", attemptStatus, err)
+	}
+	refreshApproved = true
+	refreshedApproval := request(http.MethodGet, "/api/v1/payments/"+attempt.ID+"/refresh", "", "")
+	if refreshedApproval.Code != http.StatusOK || !strings.Contains(refreshedApproval.Body.String(), `"status":"created"`) {
+		t.Fatalf("refresh after uncertain capture = %d %s", refreshedApproval.Code, refreshedApproval.Body)
+	}
+	if captureRequests != 1 {
+		t.Fatalf("capture was retried before refresh confirmed approval; provider calls = %d", captureRequests)
+	}
+	captureFails = false
+	refreshApproved = false
 	createdCapture := request(http.MethodPost, "/api/v1/payments/"+attempt.ID+"/capture", `{}`, "lifecycle-capture")
 	if createdCapture.Code != http.StatusOK || !strings.Contains(createdCapture.Body.String(), `"status":"completed"`) {
 		t.Fatalf("capture = %d %s", createdCapture.Code, createdCapture.Body)
+	}
+	if captureRequests != 2 {
+		t.Fatalf("capture request count after confirmed-safe retry = %d, want 2", captureRequests)
 	}
 	refreshed := request(http.MethodGet, "/api/v1/payments/"+attempt.ID+"/refresh", "", "")
 	if refreshed.Code != http.StatusOK || !strings.Contains(refreshed.Body.String(), `"status":"completed"`) {
