@@ -67,6 +67,7 @@ func Idempotency(db *pgxpool.Pool) gin.HandlerFunc {
 			}
 			if state == "completed" && responseStatus != nil {
 				c.Data(*responseStatus, "application/json; charset=utf-8", response)
+				c.Abort()
 				return
 			}
 			// A process may have exited while handling the request. Once its bounded
