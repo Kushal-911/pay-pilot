@@ -35,7 +35,7 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	paypalClient := paypal.New(os.Getenv("PAYPAL_BASE_URL"), os.Getenv("PAYPAL_CLIENT_ID"), os.Getenv("PAYPAL_CLIENT_SECRET"), http.DefaultClient)
+	paypalClient := paypal.New(os.Getenv("PAYPAL_BASE_URL"), os.Getenv("PAYPAL_CLIENT_ID"), os.Getenv("PAYPAL_CLIENT_SECRET"), &http.Client{Timeout: 25 * time.Second})
 	var investigationModel investigations.Model
 	if os.Getenv("OPENAI_API_KEY") != "" || os.Getenv("OPENAI_MODEL") != "" {
 		investigationModel = investigations.OpenAIModel{APIKey: os.Getenv("OPENAI_API_KEY"), Model: os.Getenv("OPENAI_MODEL"), BaseURL: os.Getenv("OPENAI_BASE_URL"), HTTPClient: &http.Client{Timeout: 20 * time.Second}}
@@ -65,6 +65,7 @@ func main() {
 	api.GET("/orders", payments.ListOrders(db))
 	api.GET("/orders/:id", payments.GetOrder(db))
 	api.GET("/orders/:id/payments", payments.ListOrderPayments(db))
+	api.GET("/orders/:id/events", payments.ListOrderEvents(db))
 	api.POST("/orders/:id/paypal-order", payments.Idempotency(db), payments.CreatePayPalOrder(db, paypalClient))
 	api.POST("/payments/:id/capture", payments.Idempotency(db), payments.CapturePayPalOrder(db, paypalClient))
 	api.GET("/payments/:id/refresh", payments.RefreshPayPalOrder(db, paypalClient))

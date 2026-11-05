@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -72,7 +73,7 @@ func TestGetOrderRefreshesProviderState(t *testing.T) {
 		if got := r.Header.Get("PayPal-Request-Id"); got != "" {
 			t.Errorf("GET refresh unexpectedly has request ID %q", got)
 		}
-		return response(http.StatusOK, `{"id":"ORDER-2","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-2","status":"COMPLETED"}]}}]}`), nil
+		return response(http.StatusOK, `{"id":"ORDER-2","status":"COMPLETED","purchase_units":[{"amount":{"currency_code":"USD","value":"25.00"},"payments":{"captures":[{"id":"CAPTURE-2","status":"COMPLETED","amount":{"currency_code":"USD","value":"25.00"}}]}}]}`), nil
 	})}
 	api := New("https://paypal.test", "client", "secret", client)
 	result, err := api.GetOrder(context.Background(), "ORDER-2")
@@ -95,15 +96,51 @@ func TestCaptureUsesSuppliedIdempotencyRequestID(t *testing.T) {
 		if got := r.Header.Get("PayPal-Request-Id"); got != "stable-capture-request" {
 			t.Errorf("PayPal-Request-Id = %q", got)
 		}
-		return response(http.StatusCreated, `{"id":"ORDER-3","status":"COMPLETED"}`), nil
+		return response(http.StatusCreated, `{"id":"ORDER-3","status":"COMPLETED","purchase_units":[{"payments":{"captures":[{"id":"CAPTURE-3","status":"COMPLETED","amount":{"currency_code":"USD","value":"25.00"}}]}}]}`), nil
 	})}
 	api := New("https://paypal.test", "client", "secret", client)
 	result, err := api.Capture(context.Background(), "ORDER-3", "stable-capture-request")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Status != "COMPLETED" {
+	if result.Status != "COMPLETED" || result.PurchaseUnits[0].Payments.Captures[0].Amount.Value != "25.00" {
 		t.Fatalf("capture status = %q", result.Status)
+	}
+}
+
+func TestDoRejectsOversizedAndMalformedProviderResponses(t *testing.T) {
+	for _, tc := range []struct {
+		name, body, want string
+	}{
+		{name: "oversized", body: strings.Repeat("x", maxProviderResponseBytes+1), want: "exceeds"},
+		{name: "malformed", body: "not-json", want: "decode PayPal response"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Path == "/v1/oauth2/token" {
+					return response(http.StatusOK, `{"access_token":"test-token"}`), nil
+				}
+				return response(http.StatusOK, tc.body), nil
+			})}
+			api := New("https://paypal.test", "client", "secret", client)
+			_, err := api.GetOrder(context.Background(), "ORDER-4")
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v, want substring %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestDoHonorsRequestContextDeadline(t *testing.T) {
+	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		<-r.Context().Done()
+		return nil, r.Context().Err()
+	})}
+	api := New("https://paypal.test", "client", "secret", client)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+	defer cancel()
+	if _, err := api.GetOrder(ctx, "ORDER-5"); err == nil {
+		t.Fatal("expected request deadline error")
 	}
 }
 

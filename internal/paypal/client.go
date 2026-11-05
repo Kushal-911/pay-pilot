@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -25,16 +27,27 @@ type OrderResult struct {
 }
 
 type CaptureResult struct {
-	ID            string `json:"id"`
-	Status        string `json:"status"`
-	PurchaseUnits []struct {
-		Payments struct {
-			Captures []struct {
-				ID     string `json:"id"`
-				Status string `json:"status"`
-			} `json:"captures"`
-		} `json:"payments"`
-	} `json:"purchase_units"`
+	ID            string         `json:"id"`
+	Status        string         `json:"status"`
+	PurchaseUnits []PurchaseUnit `json:"purchase_units"`
+}
+
+type Money struct {
+	CurrencyCode string `json:"currency_code"`
+	Value        string `json:"value"`
+}
+
+type PurchaseUnit struct {
+	Amount   Money `json:"amount"`
+	Payments struct {
+		Captures []CapturedPayment `json:"captures"`
+	} `json:"payments"`
+}
+
+type CapturedPayment struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Amount Money  `json:"amount"`
 }
 
 type WebhookHeaders struct {
@@ -87,7 +100,7 @@ func New(baseURL, clientID, secret string, client *http.Client) *Client {
 		baseURL = "https://api-m.sandbox.paypal.com"
 	}
 	if client == nil {
-		client = http.DefaultClient
+		client = &http.Client{Timeout: 25 * time.Second}
 	}
 	return &Client{strings.TrimRight(baseURL, "/"), clientID, secret, client}
 }
@@ -133,8 +146,11 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any,
 	var token struct {
 		AccessToken string `json:"access_token"`
 	}
-	if err := json.NewDecoder(tokenResp.Body).Decode(&token); err != nil {
+	if err := decodeBoundedJSON(tokenResp.Body, &token); err != nil {
 		return fmt.Errorf("decode PayPal token: %w", err)
+	}
+	if token.AccessToken == "" {
+		return fmt.Errorf("PayPal token response did not include an access token")
 	}
 	var data []byte
 	if body != nil {
@@ -166,8 +182,24 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any,
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("PayPal API returned HTTP %d", resp.StatusCode)
 	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+	if err := decodeBoundedJSON(resp.Body, out); err != nil {
 		return fmt.Errorf("decode PayPal response: %w", err)
+	}
+	return nil
+}
+
+const maxProviderResponseBytes = 1 << 20
+
+func decodeBoundedJSON(body io.Reader, out any) error {
+	data, err := io.ReadAll(io.LimitReader(body, maxProviderResponseBytes+1))
+	if err != nil {
+		return err
+	}
+	if len(data) > maxProviderResponseBytes {
+		return fmt.Errorf("PayPal response exceeds %d bytes", maxProviderResponseBytes)
+	}
+	if err := json.Unmarshal(data, out); err != nil {
+		return err
 	}
 	return nil
 }
