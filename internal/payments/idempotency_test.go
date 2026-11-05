@@ -2,6 +2,8 @@ package payments
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -49,12 +51,18 @@ func TestIdempotencyReplayAndPayloadConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	var calls atomic.Int32
+	started := make(chan struct{}, 1)
+	release := make(chan struct{})
 	router.POST("/mutate", Idempotency(db), func(c *gin.Context) {
 		calls.Add(1)
 		var input map[string]string
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(http.StatusBadRequest, errorBody("bad_request", "invalid"))
 			return
+		}
+		if input["value"] == "hold" {
+			started <- struct{}{}
+			<-release
 		}
 		c.JSON(http.StatusCreated, gin.H{"value": input["value"]})
 	})
@@ -72,7 +80,7 @@ func TestIdempotencyReplayAndPayloadConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := json.Unmarshal(replay.Body.Bytes(), &replayBody); err != nil {
-		t.Fatal(err)
+		t.Fatalf("invalid replay response %q: %v", replay.Body.String(), err)
 	}
 	if firstBody["value"] != replayBody["value"] || calls.Load() != 1 {
 		t.Fatalf("replay mismatch or handler reran: first=%v replay=%v calls=%d", firstBody, replayBody, calls.Load())
@@ -83,6 +91,37 @@ func TestIdempotencyReplayAndPayloadConflict(t *testing.T) {
 	}
 	if calls.Load() != 1 {
 		t.Fatalf("conflicting payload reached handler; calls=%d", calls.Load())
+	}
+
+	firstConcurrent := make(chan *httptest.ResponseRecorder, 1)
+	go func() { firstConcurrent <- sendIdempotentRequest(router, "idem-race-001", `{"value":"hold"}`) }()
+	<-started
+	concurrentReplay := sendIdempotentRequest(router, "idem-race-001", `{"value":"hold"}`)
+	if concurrentReplay.Code != http.StatusConflict {
+		close(release)
+		t.Fatalf("concurrent duplicate status = %d, want 409", concurrentReplay.Code)
+	}
+	close(release)
+	if response := <-firstConcurrent; response.Code != http.StatusCreated {
+		t.Fatalf("first concurrent request status = %d, body = %s", response.Code, response.Body)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("concurrent duplicate reached mutation handler; calls=%d", calls.Load())
+	}
+
+	staleKey := "idem-stale-001"
+	staleBody := `{"value":"reclaimed"}`
+	requestHash := sha256.Sum256(append([]byte("POST\n/mutate\n"), []byte(staleBody)...))
+	_, err = db.Exec(ctx, `INSERT INTO idempotency_keys(key,request_hash,state,updated_at) VALUES($1,$2,'processing',now()-interval '3 minutes')`, staleKey, hex.EncodeToString(requestHash[:]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reclaimed := sendIdempotentRequest(router, staleKey, staleBody)
+	if reclaimed.Code != http.StatusCreated {
+		t.Fatalf("stale request was not reclaimed: status=%d body=%s", reclaimed.Code, reclaimed.Body)
+	}
+	if calls.Load() != 3 {
+		t.Fatalf("reclaimed request handler calls=%d, want 3", calls.Load())
 	}
 }
 
