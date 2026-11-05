@@ -2,7 +2,7 @@
 
 ## Candidate opportunities
 
-Scores are a decision aid (1 low, 5 high), not measured user research. “Buildability” assumes the existing PayPilot codebase and roughly three weeks until deadline.
+Scores are a decision aid (1 low, 5 high), not measured user research. This assessment was first drafted 19 October 2026; delivery status below is refreshed as of 5 November 2026.
 
 | Candidate | PayPal fit | Differentiation | Demoability | Buildability | Business case | Audit |
 |---|---:|---:|---:|---:|---:|---|
@@ -33,11 +33,11 @@ This user hypothesis needs validation. Do not imply direct PayPal customer resea
 
 ## Architecture change justified by the opportunity
 
-No broad rewrite. Preserve Go/Gin, PostgreSQL, PayPal adapter, investigations package, and idempotency. Add only the user-facing workflow and real scenario observability:
+No broad rewrite. Preserve Go/Gin, PostgreSQL, PayPal adapter, investigations package, and idempotency. The queue/detail/timeline workbench and synthetic scenario now exist. Remaining proof is the full Live API journey and real Sandbox/model behavior:
 
 1. Exception queue: unknown/pending/review-required plus data mismatch; filters by amount, status, age.
 2. Payment detail: merchant order, each capture attempt, provider IDs/status, verified webhook timeline, last refresh, investigation report.
-3. One action: “Reconcile with PayPal” calls existing refresh; it does not create another capture.
+3. One action: “Verify with PayPal” calls provider refresh; it does not create another capture while outcome is uncertain.
 4. One AI action: “Investigate” runs existing constrained read-only functions. Render facts with evidence links and hypotheses in a visibly separate region.
 5. Recovery state machine: retry/create another attempt only when deterministic backend rules and current provider state permit; otherwise retain manual review.
 6. Scenario: one seeded timeout-after-provider-success case; clearly badge all generated/demo events as synthetic if not created in PayPal Sandbox.
@@ -66,11 +66,18 @@ Collect a baseline first. Candidate metrics:
 
 Do **not** claim increased authorization rates, lower chargebacks, or a dollar savings number based only on a prototype. Those need production data, a control group, and appropriate PayPal/merchant permission.
 
+## Current delivery evidence (5 November 2026)
+
+- **Implemented and locally verified:** Go/Gin + PostgreSQL persistence, idempotency, unknown-outcome recovery guard, verified/deduplicated webhook handling, evidence-scoped investigations with deterministic fallback, embedded responsive workbench, and clearly synthetic browser scenario. `PROJECT_STATUS.md` records DB-backed integration checks and a fresh-clone Compose startup/order smoke test.
+- **UI evidence:** PR #71 and issues #22/#23 record keyboard/accessibility checks, text contrast scan, and browser widths 320, 360, 390, and 640 px.
+- **Still unverified:** real PayPal Sandbox checkout and webhook delivery; end-to-end Live API operator journey; live OpenAI investigation. Fake transports and synthetic UI events do not prove those external flows.
+- **Submission gates:** owner license decision, final rules/eligibility confirmation, Devpost entry, public YouTube demo, and final go/no-go review remain.
+
 ## Brutal audit: why the idea can fail
 
 1. **AI may be cosmetic.** If deterministic code alone discovers all facts and the LLM just paraphrases them, the “AI” criterion looks thin. Demonstrate why natural-language investigation and synthesis adds value; compare with a deterministic baseline and report the model's role honestly.
-2. **PayPal integration may be unverified.** Fake transport tests do not establish sandbox correctness. The existing audit reports no database runtime and no PayPal sandbox test. This is the top risk and must be resolved before polish.
-3. **UI absence threatens design and demo.** The backend has no merchant UI. The hackathon explicitly rejects static prototypes in place of a functioning app.
+2. **PayPal integration is not externally verified.** Fake transport tests and local DB startup do not establish Sandbox checkout/webhook correctness. This is a top submission risk and must be resolved before claims of end-to-end provider proof.
+3. **Live workflow and presentation remain unproven.** A responsive UI and functional synthetic demo now exist, but the complete Live API journey and public end-to-end recording remain open. The hackathon rejects static or non-functional demos.
 4. **Significant-change eligibility.** Existing repository pre-dates the contest. The entrant must transparently show substantial post-start additions and the sponsor decides if they qualify.
 5. **No actual customer discovery.** The problem is believable but not yet validated with merchants. Frame as problem hypothesis unless interviews are completed.
 6. **No auth/tenant isolation.** Project README says the API is local-only. Keep demo data synthetic and isolated. Do not host a public API with real customer or payment data.
@@ -79,12 +86,12 @@ Do **not** claim increased authorization rates, lower chargebacks, or a dollar s
 9. **Currency limitation.** Existing README says amounts are formatted using two decimal places; keep the demo on USD and label the scope.
 10. **No proof PayPal would adopt it.** A hackathon prototype is not an integration partnership, product endorsement, or hiring signal. Pitch it as a useful exploration, not as a ready PayPal product.
 
-## Go/no-go gates
+## Go/no-go gates as of 5 November 2026
 
-- **Gate A (22 Oct):** clean local DB startup/migrations + Sandbox create, approve, capture from a fresh run. If blocked, use verified publicly documented Sandbox test flow and keep the demo's external limitation explicit; don't claim live integration.
-- **Gate B (27 Oct):** UI connects to the real backend and completes order -> exception -> refresh -> investigation with traceable records.
-- **Gate C (31 Oct):** timeout/unknown scenario proven not to issue a second capture; duplicate/out-of-order webhooks do not downgrade paid state; evidence IDs resolve to actual records.
-- **Gate D (4 Nov):** independent user can install and run from README; one demo scenario is clear and all synthetic records labeled.
-- **Gate E (7 Nov):** 3-minute video proves function, no unverified claims; submission explains post-1-Oct progress.
+- **Local foundation:** passed with database-backed tests and clean-clone Compose startup/order smoke test, recorded in `PROJECT_STATUS.md`.
+- **Workbench quality:** passed for the tested keyboard/accessibility and phone/tablet checks, recorded in PR #71 and issues #22/#23.
+- **PayPal Sandbox:** not passed; buyer-approved checkout and reachable webhook delivery still require owner account access and callback setup.
+- **Live workflow/model:** not passed; complete Live API browser journey and live OpenAI evidence-backed run remain unverified.
+- **Submission:** not passed; license, accurate Devpost entry, public sub-three-minute YouTube demo, and final rules/eligibility review remain.
 
-If a gate fails, cut features, not correctness. The minimal acceptable prototype is a single successful Sandbox checkout plus one reproducible ambiguous-outcome investigation and safe refresh behavior.
+If an external gate remains blocked, keep it visible and describe it honestly. Do not treat fake transports or the synthetic browser scenario as equivalent to real Sandbox proof.

@@ -2,6 +2,7 @@
 
 **Status:** Build specification for the PayPal AI Hackathon submission  
 **Prepared:** 22 October 2026  
+**Status rechecked:** 5 November 2026
 **Target:** Working, judge-runnable prototype and submission package by 11 November 2026 (submit early)  
 **Product owner:** PayPilot project owner  
 **Source of truth:** This document defines the target product. Existing code and documents are linked below and must not be mistaken for completed acceptance evidence.
@@ -18,7 +19,7 @@ The [official Devpost rules](https://paypalaihackathon.devpost.com/rules) and [e
 
 Rules require a meaningful PayPal developer-platform Sandbox integration and an AI tool/model/platform, a working installable application consistent with the video/description, a public repository with visible open-source license, tool/model disclosure, and a public YouTube demo shorter than three minutes. Existing projects must have been significantly updated after 1 October 2026; explain the changes honestly. Judges determine whether changes qualify. Maintain access to a working demo for judging (1–15 December per current rules). Sponsor tools are optional; sponsor prizes impose separate criteria.
 
-**Schedule guardrail:** current date leaves about three weeks. Feature work ends by 10 November. Keep 11 November for clean-run verification, video/submission and early submission. The final Devpost deadline is a hard external constraint, not a target build date.
+**Schedule guardrail (rechecked 5 November):** one week remains until the planned 12 November PT deadline. Feature work freezes by 10 November. Keep 11 November for clean-run verification, video/submission and early submission. The final Devpost deadline is a hard external constraint, not a target build date.
 
 ## 3. Problem, audience, and product hypothesis
 
@@ -42,7 +43,7 @@ Position PayPilot around **post-action payment correctness and evidence-based re
 
 The repository does not have canonical V0/V1/V2 tags or a formal version history. The following labels normalize the observed product history and establish the delivery contract going forward.
 
-### V0 — Existing foundation (implemented; runtime evidence incomplete)
+### V0 — Existing foundation (implemented; local runtime verified; external provider/model evidence incomplete)
 
 - Go/Gin API, PostgreSQL schema/migrations, Docker Compose and embedded browser workbench.
 - PayPal Orders v2 Sandbox adapter for OAuth, order creation, capture, refresh.
@@ -51,7 +52,7 @@ The repository does not have canonical V0/V1/V2 tags or a formal version history
 - Evidence-scoped investigations with deterministic checks, optional OpenAI Responses function calling, validated evidence IDs, and fallback.
 - Synthetic demo scenario and Live API UI, OpenAPI and Postman starter collection.
 
-This list describes code present in the current repository, not fully verified behavior. `PROJECT_STATUS.md` records missing PostgreSQL/Sandbox runtime verification and no auth/tenant isolation. Do not overstate it.
+This list separates code from external integration evidence. `PROJECT_STATUS.md` records PostgreSQL-backed integration tests and a fresh-clone Compose startup/order smoke test. A real PayPal Sandbox checkout/webhook and live OpenAI run remain unverified. The API also has no authentication or tenant isolation. Do not overstate it.
 
 ### V1 — Hackathon MVP (P0, required)
 
@@ -207,18 +208,18 @@ Whenever any documentation file is changed, commit that documentation change wit
 
 ## 12. Delivery plan and gates
 
-Research supplied these gates; dates below remain the working plan, not event requirements:
+Research supplied these gates; dates below are project targets, not event requirements. Status was rechecked 5 November 2026:
 
 | Gate | Target | Required exit |
 |---|---:|---|
-| A: prove the foundation | 22 Oct | Clean DB/migrations and real Sandbox create/approve/capture; document any external blocker honestly |
-| B: end-to-end workbench | 27 Oct | Real backend queue/detail/refresh/investigation journey |
-| C: prove safety | 31 Oct | Unknown outcome never recaptures; duplicate/out-of-order webhook and evidence correctness verified |
-| D: clean install | 4 Nov | Independent clean-run, demo reset, truthful synthetic labels and setup guide |
-| E: submission ready | 7 Nov | Video and text reviewed against runtime; significant changes documented |
-| Feature freeze | 10 Nov | Only correctness and submission blockers may change |
-| Submit early | 11 Nov IST | Public repository/license, video and complete Devpost submission submitted; confirm receipt |
-| Hard deadline | 13 Nov 1:30 a.m. IST | Devpost currently lists Nov 12 noon PST; re-check countdown and timezone |
+| A: prove the foundation | 22 Oct | Local DB/migrations and persisted order startup proof passed. Real Sandbox create/approve/capture remains open. |
+| B: end-to-end workbench | 27 Oct | UI and backend are implemented; complete browser Live API queue/detail/refresh/investigation proof remains open. |
+| C: prove safety | 31 Oct | Database tests cover unknown-state refresh guard, webhook deduplication/order, and evidence behavior. Real Sandbox webhook proof remains open. |
+| D: clean install | 4 Nov | Fresh-clone Compose startup/order smoke test and setup documentation passed; synthetic labels and UI quality checks are recorded. |
+| E: submission ready | 7 Nov | In progress: prepare honest entry draft and video; validate every claim against merged code and evidence. |
+| Feature freeze | 10 Nov | Only correctness and submission blockers may change. |
+| Submit early | 11 Nov IST | Owner submits complete Devpost entry and confirms receipt. |
+| Hard deadline | 13 Nov 1:30 a.m. IST | Devpost rules list Nov 12, 2026 noon Pacific Time; re-check countdown before submission. |
 
 If gates slip, cut stretch scope and polish before weakening payment invariants. A minimum credible fallback is a real successful Sandbox checkout plus one repeatable, explicitly synthetic ambiguous-outcome investigation with safe refresh behavior; disclose any unverified webhook/DB functionality.
 
@@ -257,7 +258,7 @@ Research provenance and all conclusions are indexed here. Each source is an inpu
 | `research/paypilot-technical-playbook/ai-evidence.md` | Read-only AI boundary, evidence types, validation and fallback |
 | `research/paypilot-technical-playbook/business-case.md` | Hypothesis, value chain, claims to avoid, discovery and pilot metrics |
 | `README.md`, `PROJECT_STATUS.md`, `HANDOFF.md` | Existing product behavior, implementation audit and known blockers |
-| `ROADMAP.md`, `DECISIONS.md`, `DEMO_SCRIPT.md` | Milestones, architecture decisions, demo claims and script |
+| `ROADMAP.md`, `DECISIONS.md`, `DEMO_SCRIPT.md`, `DEVPOST_DRAFT.md` | Milestones, architecture decisions, verified demo claims/script, and submission draft with explicit pre-submit gates |
 | `openapi.yaml`, `postman/PayPilot.postman_collection.json` | Existing API surface and API contract artifacts |
 | `cmd/api/main.go`, `internal/payments/`, `internal/paypal/`, `internal/investigations/`, `migrations/`, `cmd/api/web/` | Current implementation to preserve, inspect and bring to acceptance |
 

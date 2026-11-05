@@ -1,6 +1,6 @@
 # Source ledger and research log
 
-**Research snapshot:** 19 October 2026. Links below are public sources. The event page, docs, social posts, and project pages are dynamic; revisit before submitting.
+**Original research snapshot:** 19 October 2026. **Hackathon pages rechecked:** 5 November 2026. Links below are public sources. Event pages, docs, social posts, and project pages are dynamic; revisit immediately before submitting.
 
 ## Hackathon primary sources
 
@@ -10,6 +10,15 @@
 4. [Devpost FAQ](https://paypalaihackathon.devpost.com/details/faqs) — team-size, sandbox/account, sponsor tools and Discord pointers.
 5. [Devpost event updates](https://paypalaihackathon.devpost.com/updates) — build-session recording and official event updates.
 6. [Devpost project gallery](https://paypalaihackathon.devpost.com/project-gallery) — at review time states managers have not published the gallery.
+
+### 5 November 2026 recheck
+
+- Event page and official rules still list the submission deadline as 12 November 2026 at noon Pacific Time; rules specify judging 1 December 2:00 p.m. PT through 15 December 8:00 a.m. PT and winners around 21 December 2:00 p.m. PT.
+- Rules require PayPal Developer Platform Sandbox and an AI tool/model/platform, a functioning project with complete setup instructions or hosted demo, public repository with visible open-source license, tool/model disclosure, and a public YouTube video under three minutes showing the app functioning. The entrant must keep access available through judging; eligibility/ownership commitments remain owner-controlled.
+- The event update advises a concise public video that opens with the problem, demonstrates PayPal and AI end to end, and is uploaded early. It mentioned 5 November for early eligibility review; confirm in the entrant's account whether that window remains open.
+- The project gallery still says organizers have not published it; competitor research remains incomplete.
+- The event page displays conflicting prize-pool totals ($67,500 and $69,750 in different areas), so the project should not repeat a total. No sponsor-specific prize is currently selected for PayPilot.
+- Detailed dated rule record and project-specific pass/gap scorecard: `hackathon-requirements.md`.
 
 ## PayPal official product, developer, and investor materials
 
