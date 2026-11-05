@@ -16,6 +16,7 @@ const state = {
   liveSelected: null,
   analysis: null,
   running: false,
+  scenarioRunToken: 0,
   filter: "attention",
 };
 
@@ -71,7 +72,7 @@ function renderList() {
     const item = order.item || order.description || "PayPal payment";
     const amount = order.amount ?? order.amount_minor;
     const formatted = typeof amount === "string" && amount.includes("$") ? amount : money(amount, order.currency || "USD");
-    return `<button class="payment-row ${reference === state.selectedId ? "selected" : ""}" role="option" aria-selected="${reference === state.selectedId}" data-order-id="${escapeHTML(reference)}"><span class="payment-primary"><span class="payment-reference"><i class="payment-dot ${dot}"></i>${escapeHTML(reference)}</span><span class="payment-name">${escapeHTML(item)}</span></span><span class="payment-amount">${escapeHTML(formatted)}</span><span><span class="status-badge ${badge.cls}">${badge.label}</span></span><span class="last-event">${escapeHTML(order.last || relativeTime(order.updated_at || order.created_at))}</span><span class="row-arrow">›</span></button>`;
+    return `<button class="payment-row ${reference === state.selectedId ? "selected" : ""}" aria-pressed="${reference === state.selectedId}" data-order-id="${escapeHTML(reference)}"><span class="payment-primary"><span class="payment-reference"><i class="payment-dot ${dot}"></i>${escapeHTML(reference)}</span><span class="payment-name">${escapeHTML(item)}</span></span><span class="payment-amount">${escapeHTML(formatted)}</span><span><span class="status-badge ${badge.cls}">${badge.label}</span></span><span class="last-event">${escapeHTML(order.last || relativeTime(order.updated_at || order.created_at))}</span><span class="row-arrow">›</span></button>`;
   }).join("");
   $("#queue-count").textContent = String(orders.length).padStart(2, "0");
   $("#queue-footer-text").textContent = `Showing ${orders.length} ${state.filter === "attention" ? "payments needing attention" : "payments"}`;
@@ -258,6 +259,7 @@ async function runScenario() {
   if (state.running) return;
   if (state.scenario !== "ready") resetScenario(false);
   state.running = true;
+  const runToken = ++state.scenarioRunToken;
   const button = $("#run-scenario");
   button.disabled = true;
   button.innerHTML = '<span class="play-icon">◌</span> Running transaction trace…';
@@ -270,6 +272,7 @@ async function runScenario() {
   ];
   for (const step of steps) {
     await delay(1450);
+    if (runToken !== state.scenarioRunToken) return;
     if (step.phase === "capture") state.scenario = "lost";
     if (step.phase === "event") state.scenario = "event";
     if (step.phase === "checkout") state.scenario = "capturing";
@@ -287,6 +290,7 @@ async function runScenario() {
 }
 
 function resetScenario(showToast = true) {
+  state.scenarioRunToken++;
   state.scenario = "ready";
   state.demoOrders = structuredClone(demoBase);
   state.analysis = null;
