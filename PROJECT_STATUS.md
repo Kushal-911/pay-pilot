@@ -1,85 +1,74 @@
 # Project Status
 
-## Current date and milestone
-2026-10-19 — Day 3 investigation backend and Day 4 webhook/reconciliation backend implemented; responsive merchant workbench and synthetic demo flow added. Runtime integration remains unverified.
+## Snapshot — 2026-11-05
 
-## Last completed milestone
-No full day milestone has met its end-to-end acceptance criterion. Day 1/2 backend foundations and Day 3 investigation API are implemented, but PostgreSQL runtime and real Sandbox verification are outstanding.
+PayPilot has a working local prototype with a responsive workbench, Go/Gin API, PostgreSQL persistence, deterministic investigation fallback, PayPal Sandbox adapter, verified webhook handler, and guarded capture recovery. The full local stack and core database paths have now been exercised against fresh PostgreSQL 16 databases. A real PayPal Sandbox checkout and live OpenAI investigation have not been run because account credentials are not available.
 
-## Implementation audit
+**Delivery status:** V0 foundation is implemented and locally verified. V1 hackathon MVP is partially complete: the UI and local API/DB demo work, while real provider/model validation, owner-controlled submission assets, and remaining manual UI/accessibility review are outstanding. Do not describe this prototype as production-ready; it has no merchant authentication or tenant isolation.
 
-| Area | Assessment | Evidence and limits |
-|---|---|---|
-| Application foundation | Partial | Go/Gin service, Docker Compose, SQL migrations, order and payment routes, plus an embedded responsive merchant workbench exist. |
-| PayPal Sandbox | Partial | OAuth, order creation, capture, and refresh use PayPal REST endpoints. No Sandbox credential or buyer flow has been run. |
-| Order/payment persistence | Partial | PostgreSQL schema has orders and payment attempts, constraints and indexes. Database migrations and endpoints have not been executed against a live DB. |
-| Payment lifecycle | Partial | Order statuses pending/paid/failed/review_required; attempt statuses created/capturing/unknown/completed/failed. Capture is guarded and uncertain outcomes require refresh. Runtime transitions unverified. |
-| Idempotency | Partial | Mutation middleware stores response/status by request hash and rejects mismatched reuse. PostgreSQL integration test is gated by `TEST_DATABASE_URL` and has not run. |
-| Webhooks | Partial | PayPal postback signature verification, event ID deduplication, minimal event storage, and transactional event processing are implemented. Fake verifier and transition tests pass; PayPal and PostgreSQL runtime not verified. |
-| Reconciliation | Partial | Provider refresh, order/attempt comparisons, and monotonic capture-event transitions exist. Event sequence coverage is limited; database flow unverified. |
-| AI investigation | Partial | Four scoped read-only functions, OpenAI Responses tool loop, ID validation, deterministic fallback, and persisted report API are implemented. No API key found/configured; live model and database flow unverified. |
-| Frontend | Partial | Embedded HTML/CSS/JS workbench includes demo and live API modes, order queue, evidence timeline, investigations, and new Sandbox order flow. UI is served by the Go binary at `/`. Browser and API runtime verification pending. |
-| Testing/deployment | Partial | Go tests/vet, Compose config, and Postman JSON validation pass. No DB/Sandbox integration test or deployment; local Docker daemon is unavailable. |
+## What works
 
-## Working features
-- Go/Gin API with database health check and order create/list/detail endpoints.
-- PostgreSQL schema for orders and payment attempts, initialized by Docker Compose.
-- PayPal adapter for OAuth, REST order creation, and capture; backend persists the returned provider identifiers and marks paid only after a completed capture response.
-- Mutation idempotency for order creation, checkout creation, and capture; key/request mismatches conflict and completed responses replay.
-- Deterministic PayPal request IDs; capture transitions through `capturing` and `unknown`, and refresh reconciles authoritative provider order/capture state before another capture is allowed.
-- Order payment-attempt history endpoint.
-- Investigation create/get/list API with four order-scoped read-only tools, deterministic discrepancy rules, optional OpenAI function calling, evidence reference validation, and fallback reports.
-- PayPal webhook postback signature verification, event ID deduplication, sanitized persisted metadata, and monotonic capture event transitions.
-- Responsive merchant workbench served from the Go binary; local simulation demonstrates agent mandate scope, ambiguous capture timeout, delayed completion evidence, provider verification, and single reconciliation. Synthetic data and provider behavior are explicitly labeled; no provider calls or money movement occur in Demo mode.
-- Live API mode wired to order, payment attempt, PayPal checkout/capture/refresh, and investigation endpoints; no silent synthetic fallback.
-- API and provider tests using fake HTTP transports; a PostgreSQL-gated idempotency integration test is available.
-- OpenAPI and Postman starter collection.
-- Provider adapter tests using a local fake HTTP transport; PostgreSQL-gated idempotency integration test.
+- Embedded workbench with Synthetic Demo and Live API modes, payment queue/detail, order creation, event timeline, investigation evidence, and provider status/recovery actions.
+- Go/Gin API with PostgreSQL-backed orders, payment attempts, idempotency records, investigations, and sanitized provider-event history.
+- PayPal adapter for OAuth, order creation, capture, refresh, and signature verification. Fake-provider integration tests exercise these contracts; no live PayPal Sandbox request has been made.
+- Capture ambiguity persists as `unknown`. A database-backed test proves a provider refresh is required before capture is eligible again.
+- Webhook signature rejection, event deduplication, amount/currency mismatch handling, and completed-state monotonicity are covered against PostgreSQL using a deterministic verification transport.
+- Liveness (`/livez`) is separate from database readiness (`/readyz`); `/health` remains a compatibility alias for readiness.
+- Demo mode uses clearly labeled synthetic behavior and does not call PayPal or move money.
 
-## Known bugs / limitations
-- API has not yet been exercised against a running PostgreSQL instance.
-- PayPal Sandbox and OpenAI provider calls have not been exercised; credentials are unavailable.
-- Idempotency, investigation persistence, and payment transitions have not been run against PostgreSQL.
-- Full audit/approval workflow and authorization remain incomplete; browser UI is a local-development prototype only.
-- API has no merchant authentication/tenant isolation and is local-development only.
-- Amount conversion currently assumes two-decimal currencies.
+## Verification completed
 
-## Current blockers
-- PayPal Sandbox credentials and buyer account are not available in the repository/environment, so a real checkout cannot yet be verified.
-- Docker CLI is present, but the local Docker daemon is not running/reachable; the Compose stack could not be started for integration checks.
+The following passed on 2026-11-05:
 
-## Files changed
-- `PROJECT_STATUS.md`, `ROADMAP.md`, `DECISIONS.md`, `HANDOFF.md`, `README.md`
-- `cmd/api/web/index.html`, `cmd/api/web/app.css`, `cmd/api/web/app.js`
-- `cmd/api/main.go`, `internal/investigations/*.go`, `internal/payments/handlers.go`, `internal/payments/idempotency.go`, `internal/payments/idempotency_test.go`, `internal/payments/webhooks*.go`, `internal/paypal/client.go`, `internal/paypal/client_test.go`
-- `migrations/003_investigations.sql`, `docker-compose.yml`, `.env.example`
-- `README.md`, `openapi.yaml`, `postman/PayPilot.postman_collection.json`
+- Go 1.26.3: `TEST_DATABASE_URL='postgres://paypilot:paypilot_test_local@127.0.0.1:55432/paypilot?sslmode=disable' GOCACHE=/tmp/paypilot-go-cache go test ./...` passed against disposable PostgreSQL 16; the DB-gated tests ran rather than skipped. The suite covers exact idempotency replay/conflict/concurrency/stale claim recovery; order → PayPal order → capture → refresh → investigation persistence/read; capture timeout → `unknown` → refresh approval → safe capture retry; webhook deduplication, signature rejection, mismatch handling, and monotonic state; and sanitized/scoped event history.
+- `go vet ./...`, `go build ./cmd/api`, `node --check cmd/api/web/app.js`, `git diff --check`, and `docker compose config -q` passed.
+- A fresh isolated Compose project built the API image, applied migrations 001–003 to a new PostgreSQL volume, started the API after the database health check, returned 200 from `/livez`, `/readyz`, and `/health`, and returned 201 from a database-backed order creation request. The temporary project, network, and volume were removed afterward.
+- Docker Engine 29.4.0; Postgres image `postgres:16-alpine`; Node v22.14.0.
+- Workbench browser review covered the synthetic recovery walkthrough, keyboard payment selection, reset cancellation, and a tablet-width layout. Phone widths 320–640 and a full color-contrast audit remain open manual checks.
 
-## Tests run and results
-- This workbench turn: `node --check cmd/api/web/app.js`, `GOCACHE=/tmp/paypilot-go-cache go test ./...`, `go vet ./...`, `go build -o /tmp/paypilot-api ./cmd/api`, and `git diff --check` passed. Browser preview was opened in Codex and the full synthetic event → provider verification → single reconciliation walkthrough was exercised successfully.
-- Compose runtime remains unavailable: Docker cannot connect to the local daemon socket. The browser preview used a static local server, so it verifies Demo mode; the Go API/DB-backed Live API mode still needs runtime integration.
-- `go version`: Go 1.26.3 available.
-- `node --version`: v22.14.0 available.
-- `docker --version`: Docker 29.4.0 available.
-- `GOCACHE=/tmp/paypilot-go-cache go test -count=1 ./...`: passed this session, including deterministic investigation, evidence validation, fallback, and fake Responses API tool-loop tests.
-- This test run also passed webhook request-body preservation, amount parsing, and out-of-order capture transition tests using fake provider responses. The PostgreSQL integration test is skipped because `TEST_DATABASE_URL` is not set.
-- `GOCACHE=/tmp/paypilot-go-cache go vet ./...`: passed this session.
-- `docker compose config -q`: passed this session with all three migrations and optional AI environment variables.
-- `python3 -m json.tool postman/PayPilot.postman_collection.json`: passed this session.
-- `git diff --check`: passed this session.
-- `docker compose up --build -d`: blocked because the local Docker daemon is not running/reachable.
-- No real database or PayPal Sandbox integration test has been run.
+## Reproducing local startup and PostgreSQL integration checks
 
-## Required environment variables
-Required: `DATABASE_URL`. Optional: `PORT`, `PAYPAL_BASE_URL`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_RETURN_URL`, `PAYPAL_CANCEL_URL`, `PAYPAL_WEBHOOK_ID`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`. Names only; no values stored here.
+For the normal clean-machine path, copy `.env.example` to `.env` if configuring provider/model credentials, then run:
 
-## Next three tasks
-1. Start Docker/PostgreSQL when available; apply migrations 001–003 and run database-gated idempotency plus order/investigation/webhook flows.
-2. Run the Go-embedded workbench against PostgreSQL and exercise order → attempts → event timeline → investigation evidence journey.
-3. Configure Sandbox/OpenAI credentials and verify live provider/model paths; define authorization before adding approval controls.
+```sh
+docker compose up --build -d
+curl -fsS http://localhost:8080/livez
+curl -fsS http://localhost:8080/readyz
+```
 
-## Git and deadline
-- Branch: `main`
-- Latest relevant implementation commit: `141bec3` (`feat: add payment investigations and webhook reconciliation`).
-- Remaining time: five planned workdays per updated direction; external deadline not supplied.
-- Scope cuts: defer AG Grid, APIMatic, Render, analytics, Elastic, and advanced risk scoring until the P0 flow is stable.
+If ports 5432 or 8080 are already occupied, the Compose host bindings can be changed without editing the file:
+
+```sh
+POSTGRES_HOST_PORT=55433 API_HOST_PORT=18082 docker compose up --build -d
+curl -fsS http://localhost:18082/livez
+curl -fsS http://localhost:18082/readyz
+```
+
+Compose applies numbered SQL migrations 001–003 only when initializing a new PostgreSQL data volume. For disposable integration tests, point `TEST_DATABASE_URL` at a local PostgreSQL 16 database; the test helper creates a unique schema, applies the migrations in that schema, and drops it during cleanup:
+
+```sh
+TEST_DATABASE_URL='postgres://paypilot:password@127.0.0.1:5432/paypilot?sslmode=disable' go test ./...
+```
+
+The idempotency claim timeout is two minutes; completed idempotency responses have no automatic expiry and must be retained for replay safety. Never reset a volume that contains data you need.
+
+## Remaining work and gates
+
+- **External provider proof:** configure PayPal Sandbox business/buyer credentials and a reachable HTTPS webhook URL; complete buyer approval, capture, refresh, and provider webhook flow. No credentials or customer data are present in this repository.
+- **AI proof:** configure an approved OpenAI API key/model and verify the live Responses API path; deterministic fallback is available and covered by tests.
+- **UI review:** test phone widths 320–640 and complete a color-contrast audit; keep #22 and #23 open until evidence is recorded.
+- **Submission package:** owner must select/approve the license and provide account-owned Devpost/video actions; accuracy checks, final demo recording, and deadline recheck remain before submission.
+- **Production scope:** authentication, tenant isolation, authorization, secret management, audit controls, retention policy, operational monitoring, backups, deployment hardening, and the production gate remain future milestones. Do not host real merchant data.
+
+See GitHub issues #4–#7, #21–#23, #25–#29, and the V2/V3 roadmap issues for detailed acceptance criteria. See `ROADMAP.md`, `PRD.md`, `research/paypal-hackathon-dossier/`, and `AGENTS.md` for scope, sources, and repository practices.
+
+## Current code constraints
+
+- PayPal amount formatting currently assumes a two-decimal currency exponent.
+- The API has no merchant authentication or tenant isolation and is suitable only for trusted local development.
+- Live API aggregate health metrics are unavailable; synthetic metric values are labeled and hidden in Live API mode.
+- PostgreSQL-gated integration tests skip unless `TEST_DATABASE_URL` is explicitly provided.
+
+## Git and delivery
+
+All implementation changes use Conventional Commits and are reviewed through PRs. Per `AGENTS.md`, documentation changes are committed with a focused Conventional Commit directly to `main`, after confirming the branch and fast-forward safety. Never force-push.

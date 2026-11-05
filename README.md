@@ -10,9 +10,9 @@ Choose **Live API** to read orders and investigations from the Go API and use Pa
 
 ## Run locally
 
-1. Copy `.env.example` to `.env` and set PayPal Sandbox client credentials, checkout return/cancel URLs, and `PAYPAL_WEBHOOK_ID`. To enable model-assisted investigation, also set `OPENAI_API_KEY` and `OPENAI_MODEL`; otherwise reports use deterministic record checks.
-2. Start the database and API with `docker compose up --build`.
-3. Open `http://localhost:8080/` for the workbench and check `GET http://localhost:8080/health`.
+1. Copy `.env.example` to `.env` if you want to configure PayPal Sandbox client credentials, checkout return/cancel URLs, and `PAYPAL_WEBHOOK_ID`. To enable model-assisted investigation, also set `OPENAI_API_KEY` and `OPENAI_MODEL`; otherwise reports use deterministic record checks. These credentials are not needed to start the local app.
+2. Start the database and API with `docker compose up --build -d`.
+3. Open `http://localhost:8080/` for the workbench. `GET /livez` checks process liveness, while `GET /readyz` checks PostgreSQL readiness; `/health` remains a readiness alias.
 4. To create a real Sandbox checkout, switch the workbench to **Live API** and create an order, or use `POST /api/v1/orders` followed by `POST /api/v1/orders/{id}/paypal-order`.
 5. Open the returned `approval_url` in a browser and approve with a PayPal Sandbox buyer. Capture with the workbench or `POST /api/v1/payments/{payment_id}/capture`.
 
@@ -21,6 +21,10 @@ Example order:
 ```json
 {"merchant_reference":"demo-001","amount_minor":2500,"currency":"USD","description":"Demo order"}
 ```
+
+If host ports 5432 or 8080 are occupied, set `POSTGRES_HOST_PORT` and/or `API_HOST_PORT` when starting Compose, for example `POSTGRES_HOST_PORT=55433 API_HOST_PORT=18082 docker compose up --build -d`.
+
+PostgreSQL integration tests create a temporary schema, apply migrations 001–003, and drop the schema on completion. Run them explicitly against a disposable local database with `TEST_DATABASE_URL='postgres://paypilot:password@127.0.0.1:5432/paypilot?sslmode=disable' go test ./...`; without this variable, DB-gated tests are skipped.
 
 `amount_minor` is an integer in the currency's minor unit. This initial implementation formats PayPal amounts with two decimal places, so use two-decimal currencies (for example USD) until currency exponent handling is expanded.
 
