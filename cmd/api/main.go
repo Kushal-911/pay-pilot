@@ -40,6 +40,13 @@ func main() {
 	if os.Getenv("OPENAI_API_KEY") != "" || os.Getenv("OPENAI_MODEL") != "" {
 		investigationModel = investigations.OpenAIModel{APIKey: os.Getenv("OPENAI_API_KEY"), Model: os.Getenv("OPENAI_MODEL"), BaseURL: os.Getenv("OPENAI_BASE_URL"), HTTPClient: &http.Client{Timeout: 20 * time.Second}}
 	}
+	r := newRouter(db, paypalClient, investigationModel)
+	if err := r.Run(":" + port); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func newRouter(db *pgxpool.Pool, paypalClient *paypal.Client, investigationModel investigations.Model) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.GET("/", func(c *gin.Context) {
@@ -51,15 +58,20 @@ func main() {
 	r.GET("/app.js", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/javascript; charset=utf-8", mustReadWebFile("web/app.js"))
 	})
-	r.GET("/health", func(c *gin.Context) {
+	r.GET("/livez", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "alive"})
+	})
+	ready := func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
 		if err := db.Ping(ctx); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unavailable"})
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unavailable", "dependency": "database"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	}
+	r.GET("/readyz", ready)
+	r.GET("/health", ready)
 	api := r.Group("/api/v1")
 	api.POST("/orders", payments.Idempotency(db), payments.CreateOrder(db))
 	api.GET("/orders", payments.ListOrders(db))
@@ -73,9 +85,7 @@ func main() {
 	api.POST("/investigations", payments.Idempotency(db), investigations.CreateHandler(db, investigationModel))
 	api.GET("/investigations/:id", investigations.GetHandler(db))
 	api.GET("/orders/:id/investigations", investigations.ListForOrderHandler(db))
-	if err := r.Run(":" + port); err != nil {
-		log.Fatal(err)
-	}
+	return r
 }
 
 func mustReadWebFile(name string) []byte {
