@@ -64,6 +64,52 @@ func TestModelFailureReturnsDeterministicReport(t *testing.T) {
 	}
 }
 
+func TestOpenAIProviderFailuresReturnDeterministicReport(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{name: "unavailable provider", status: http.StatusServiceUnavailable, body: `{"error":"private provider detail"}`},
+		{name: "malformed model report", status: http.StatusOK, body: `{"output_text":"not-json"}`},
+		{name: "missing model report", status: http.StatusOK, body: `{"output":[]}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: tt.status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(tt.body))}, nil
+			})
+			model := OpenAIModel{APIKey: "test-key", Model: "test-model", BaseURL: "https://api.openai.test/v1", HTTPClient: &http.Client{Transport: transport}}
+			snapshot := sampleSnapshot()
+			report, err := (Service{Store: testStore{snapshot: snapshot}, Model: model}).Investigate(context.Background(), testOrderID, "Why pending?")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if report.AnalysisSource != "deterministic" || report.ModelStatus != "unavailable" || report.Finding != "order_attempt_status_mismatch" {
+				t.Fatalf("provider failure did not preserve deterministic report: %+v", report)
+			}
+			if strings.Contains(report.ModelMessage, "private provider detail") {
+				t.Fatalf("provider response leaked into fallback: %q", report.ModelMessage)
+			}
+		})
+	}
+}
+
+func TestOpenAITimeoutReturnsDeterministicReport(t *testing.T) {
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, context.DeadlineExceeded
+	})
+	model := OpenAIModel{APIKey: "test-key", Model: "test-model", BaseURL: "https://api.openai.test/v1", HTTPClient: &http.Client{Transport: transport}}
+	snapshot := sampleSnapshot()
+	report, err := (Service{Store: testStore{snapshot: snapshot}, Model: model}).Investigate(context.Background(), testOrderID, "Why pending?")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.AnalysisSource != "deterministic" || report.ModelStatus != "unavailable" || report.Finding != "order_attempt_status_mismatch" {
+		t.Fatalf("timeout did not preserve deterministic report: %+v", report)
+	}
+}
+
 func TestInvalidModelEvidenceFallsBackAndDoesNotDowngradeDeterministicReview(t *testing.T) {
 	snapshot := sampleSnapshot()
 	modelReport := Report{Summary: "All records look good.", Explanation: Claim{Text: "No issue exists.", EvidenceIDs: []string{"order:" + testOrderID}}, ConfirmedFacts: []Claim{{Text: "The payment succeeded.", EvidenceIDs: []string{"attempt:invented"}}}, Confidence: .99, ConfidenceExplanation: "The model is certain.", Recommendation: "no_action"}
@@ -77,6 +123,30 @@ func TestInvalidModelEvidenceFallsBackAndDoesNotDowngradeDeterministicReview(t *
 	}
 	if report.Recommendation != "review_records" || report.Finding != "order_attempt_status_mismatch" {
 		t.Fatalf("model downgraded deterministic finding: %+v", report)
+	}
+}
+
+func TestInvalidModelFieldsFallBack(t *testing.T) {
+	snapshot := sampleSnapshot()
+	validEvidence := []string{"order:" + testOrderID}
+	tests := []struct {
+		name   string
+		report Report
+	}{
+		{name: "unsupported recommendation", report: Report{Summary: "Records disagree on the current payment status.", Explanation: Claim{Text: "The saved records disagree.", EvidenceIDs: validEvidence}, ConfirmedFacts: []Claim{{Text: "The records disagree.", EvidenceIDs: validEvidence}}, Confidence: .8, Recommendation: "capture_again"}},
+		{name: "confidence outside range", report: Report{Summary: "Records disagree on the current payment status.", Explanation: Claim{Text: "The saved records disagree.", EvidenceIDs: validEvidence}, ConfirmedFacts: []Claim{{Text: "The records disagree.", EvidenceIDs: validEvidence}}, Confidence: 1.5, Recommendation: "review_records"}},
+		{name: "missing facts", report: Report{Summary: "Records disagree on the current payment status.", Explanation: Claim{Text: "The saved records disagree.", EvidenceIDs: validEvidence}, Confidence: .8, Recommendation: "review_records"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report, err := (Service{Store: testStore{snapshot: snapshot}, Model: testModel{report: tt.report}}).Investigate(context.Background(), testOrderID, "Why pending?")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if report.AnalysisSource != "deterministic" || report.ModelStatus != "unavailable" || report.Recommendation != "review_records" {
+				t.Fatalf("invalid fields were not replaced by deterministic report: %+v", report)
+			}
+		})
 	}
 }
 
