@@ -4,7 +4,7 @@
 
 PayPilot has a working local prototype with a responsive workbench, Go/Gin API, PostgreSQL persistence, deterministic investigation fallback, PayPal Sandbox adapter, verified webhook handler, and guarded capture recovery. The full local stack and core database paths have now been exercised against fresh PostgreSQL 16 databases. A real PayPal Sandbox checkout and live OpenAI investigation have not been run because account credentials are not available.
 
-**Delivery status:** V0 foundation is implemented and locally verified. V1 hackathon MVP is partially complete: the UI and local API/DB demo work, while real provider/model validation, owner-controlled submission assets, and remaining manual UI/accessibility review are outstanding. Do not describe this prototype as production-ready; it has no merchant authentication or tenant isolation.
+**Delivery status:** V0 foundation is implemented and locally verified. V1 hackathon MVP is partially complete: the UI and local API/DB demo work, while real provider/model validation and owner-controlled submission assets remain. The V1 workbench accessibility and narrow-screen checks (#22, #23) are complete. Do not describe this prototype as production-ready; it has no merchant authentication or tenant isolation.
 
 ## What works
 
@@ -24,7 +24,7 @@ The following passed on 2026-11-05:
 - `go vet ./...`, `go build ./cmd/api`, `node --check cmd/api/web/app.js`, `git diff --check`, and `docker compose config -q` passed.
 - A fresh isolated Compose project built the API image, applied migrations 001–003 to a new PostgreSQL volume, started the API after the database health check, returned 200 from `/livez`, `/readyz`, and `/health`, and returned 201 from a database-backed order creation request. The temporary project, network, and volume were removed afterward.
 - Docker Engine 29.4.0; Postgres image `postgres:16-alpine`; Node v22.14.0.
-- Workbench browser review covered the synthetic recovery walkthrough, keyboard payment selection, reset cancellation, and a tablet-width layout. Phone widths 320–640 and a full color-contrast audit remain open manual checks.
+- Workbench browser review covered the synthetic recovery walkthrough, keyboard payment selection, reset cancellation, and a tablet-width layout. After PR #71, viewport checks at 320, 360, 390, and 640px confirmed that the document does not overflow horizontally, the payment detail fits, and the queue scrolls within its own container. A rendered text contrast scan found no text below 4.5:1 at the audited layout. GitHub issues #22 and #23 are closed.
 
 ## Reproducing local startup and PostgreSQL integration checks
 
@@ -56,7 +56,7 @@ The idempotency claim timeout is two minutes; completed idempotency responses ha
 
 - **External provider proof:** configure PayPal Sandbox business/buyer credentials and a reachable HTTPS webhook URL; complete buyer approval, capture, refresh, and provider webhook flow. No credentials or customer data are present in this repository.
 - **AI proof:** configure an approved OpenAI API key/model and verify the live Responses API path; deterministic fallback is available and covered by tests.
-- **UI review:** test phone widths 320–640 and complete a color-contrast audit; keep #22 and #23 open until evidence is recorded.
+- **UI review:** V1 keyboard/accessibility and phone/tablet layout checks are complete (#22, #23). Revisit accessibility during future feature work and broaden automated coverage beyond the completed manual/browser audit.
 - **Submission package:** owner must select/approve the license and provide account-owned Devpost/video actions; accuracy checks, final demo recording, and deadline recheck remain before submission.
 - **Production scope:** authentication, tenant isolation, authorization, secret management, audit controls, retention policy, operational monitoring, backups, deployment hardening, and the production gate remain future milestones. Do not host real merchant data.
 
