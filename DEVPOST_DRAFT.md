@@ -38,7 +38,13 @@ The intended user is a merchant developer/operator or support/finance operator i
 
 ## What changed during the event period
 
-PayPilot existed before the submission period. The repository history shows substantial work during the period, including the evidence-first workbench and recovery controls, persisted payment/event/investigation flows, idempotency and webhook handling, safe unknown-outcome behavior, setup/test documentation, and UI quality improvements. Merged implementation PRs include [#9](https://github.com/Kushal-911/pay-pilot/pull/9) and [#65–#71](https://github.com/Kushal-911/pay-pilot/pulls?q=is%3Apr+is%3Amerged). The entrant must review the exact commit history, explain the changes honestly, and understand that Devpost/PayPal alone decides whether they are significant enough.
+PayPilot existed before the submission period. The public Git history records its initial PayPal checkout foundation and payment reliability/investigation work on 18 October 2026, after the 1 October period opened:
+
+- [Initial PayPal checkout foundation (`c20e77e`)](https://github.com/Kushal-911/pay-pilot/commit/c20e77e) added the Go/Gin API, database migration base, and PayPal checkout path.
+- [Payment idempotency and recovery states (`43dc1a5`)](https://github.com/Kushal-911/pay-pilot/commit/43dc1a5) added safe mutation replay and ambiguous-outcome handling.
+- [Investigations and webhook reconciliation (`141bec3`)](https://github.com/Kushal-911/pay-pilot/commit/141bec3) added the evidence/investigation and verified-event foundation.
+
+Further work merged on 5 November includes the [evidence-first workbench and capture safeguards (PR #9)](https://github.com/Kushal-911/pay-pilot/pull/9); PostgreSQL-backed event, webhook, and order-lifecycle verification (PRs [#65](https://github.com/Kushal-911/pay-pilot/pull/65), [#66](https://github.com/Kushal-911/pay-pilot/pull/66), [#67](https://github.com/Kushal-911/pay-pilot/pull/67)); liveness/readiness and configurable Compose host ports (PRs [#68](https://github.com/Kushal-911/pay-pilot/pull/68), [#69](https://github.com/Kushal-911/pay-pilot/pull/69)); timeout-to-unknown refresh-before-retry behavior (PR #70); and mobile/accessibility improvements (PR #71). The entrant must review the exact commit history, explain the changes honestly, and understand that Devpost/PayPal alone decides whether they are significant enough.
 
 ## Demo and source access
 
