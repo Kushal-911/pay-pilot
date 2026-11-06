@@ -40,8 +40,22 @@ func newPostgresTestSchema(t *testing.T) *pgxpool.Pool {
 		admin.Close()
 		t.Fatal(err)
 	}
-	for _, name := range []string{"001_initial.sql", "002_reliability.sql", "003_investigations.sql"} {
-		migration, err := os.ReadFile(filepath.Join("..", "..", "migrations", name))
+	migrations, err := filepath.Glob(filepath.Join("..", "..", "migrations", "[0-9][0-9][0-9]_*.sql"))
+	if err != nil {
+		db.Close()
+		_, _ = admin.Exec(ctx, `DROP SCHEMA `+schema+` CASCADE`)
+		admin.Close()
+		t.Fatalf("list migrations: %v", err)
+	}
+	if len(migrations) == 0 {
+		db.Close()
+		_, _ = admin.Exec(ctx, `DROP SCHEMA `+schema+` CASCADE`)
+		admin.Close()
+		t.Fatal("no numbered SQL migrations found")
+	}
+	for _, path := range migrations {
+		name := filepath.Base(path)
+		migration, err := os.ReadFile(path)
 		if err != nil {
 			db.Close()
 			_, _ = admin.Exec(ctx, `DROP SCHEMA `+schema+` CASCADE`)
