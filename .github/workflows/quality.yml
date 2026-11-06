@@ -60,8 +60,9 @@ jobs:
           "$(go env GOPATH)/bin/govulncheck" ./...
       - name: Check dependency license policy
         run: |
-          go install github.com/google/go-licenses/v2@v1.6.0
-          "$(go env GOPATH)/bin/go-licenses" check --disallowed_types=restricted,reciprocal,forbidden,unknown ./...
+          go install github.com/google/go-licenses/v2@v2.0.1
+          # The local module license is an owner decision tracked in #26; still inspect every third-party dependency.
+          "$(go env GOPATH)/bin/go-licenses" check ./... --ignore paypilot --disallowed_types=restricted,reciprocal,forbidden,unknown
 
   postgres-integration:
     name: PostgreSQL migrations and integration tests
