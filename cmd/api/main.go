@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,19 @@ import (
 var webFiles embed.FS
 
 func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	// Public hosting is restricted to the synthetic, browser-only workbench.
+	// The live API remains available only in the normal database-backed mode.
+	if os.Getenv("PUBLIC_DEMO_MODE") == "true" {
+		if err := newPublicDemoRouter().Run(":" + port); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Fatal("DATABASE_URL is required")
@@ -30,11 +44,6 @@ func main() {
 		log.Fatalf("connect database: %v", err)
 	}
 	defer db.Close()
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
 	paypalClient := paypal.New(os.Getenv("PAYPAL_BASE_URL"), os.Getenv("PAYPAL_CLIENT_ID"), os.Getenv("PAYPAL_CLIENT_SECRET"), &http.Client{Timeout: 25 * time.Second})
 	var investigationModel investigations.Model
 	if os.Getenv("OPENAI_API_KEY") != "" || os.Getenv("OPENAI_MODEL") != "" {
@@ -49,15 +58,7 @@ func main() {
 func newRouter(db *pgxpool.Pool, paypalClient *paypal.Client, investigationModel investigations.Model) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
-	r.GET("/", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", mustReadWebFile("web/index.html"))
-	})
-	r.GET("/app.css", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/css; charset=utf-8", mustReadWebFile("web/app.css"))
-	})
-	r.GET("/app.js", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/javascript; charset=utf-8", mustReadWebFile("web/app.js"))
-	})
+	registerWebRoutes(r, false)
 	r.GET("/livez", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "alive"})
 	})
@@ -86,6 +87,38 @@ func newRouter(db *pgxpool.Pool, paypalClient *paypal.Client, investigationModel
 	api.GET("/investigations/:id", investigations.GetHandler(db))
 	api.GET("/orders/:id/investigations", investigations.ListForOrderHandler(db))
 	return r
+}
+
+func newPublicDemoRouter() *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Logger(), gin.Recovery())
+	if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatalf("configure trusted proxies: %v", err)
+	}
+	registerWebRoutes(r, true)
+	r.GET("/livez", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "alive"})
+	})
+	r.GET("/readyz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ready", "mode": "synthetic-demo"})
+	})
+	return r
+}
+
+func registerWebRoutes(r *gin.Engine, publicDemo bool) {
+	r.GET("/", func(c *gin.Context) {
+		index := mustReadWebFile("web/index.html")
+		if publicDemo {
+			index = []byte(strings.Replace(string(index), "</head>", `<script>window.PAYPILOT_PUBLIC_DEMO=true;</script></head>`, 1))
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", index)
+	})
+	r.GET("/app.css", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/css; charset=utf-8", mustReadWebFile("web/app.css"))
+	})
+	r.GET("/app.js", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/javascript; charset=utf-8", mustReadWebFile("web/app.js"))
+	})
 }
 
 func mustReadWebFile(name string) []byte {
