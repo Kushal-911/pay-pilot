@@ -1,6 +1,6 @@
 # Devpost submission draft
 
-**State:** Updated 9 November 2026. **Draft only; not ready to submit.** The PayPal Sandbox checkout/capture/webhook and synthetic hosted demo have now been verified, and the owner-approved MIT license is included. Live OpenAI evidence, public video, owner review, and final rules check remain submission gates. The entrant must decide whether to proceed without live AI evidence; do not imply that the requirement has been demonstrated.
+**State:** Updated 9 November 2026. **Draft only; not ready to submit.** The PayPal Sandbox checkout/capture/webhook/refresh and synthetic hosted demo have been verified, and the owner-approved MIT license is included. The owner chose not to configure live AI and approved proceeding toward submission with this limitation disclosed. No live AI investigation has been demonstrated; the official rules require an AI tool/model/platform, so this is an eligibility risk. Public video, owner review, and final rules check remain submission gates.
 
 ## Project name
 
@@ -25,7 +25,7 @@ The browser-only guided scenario demonstrates an ambiguous capture and safe reco
 - **Verified locally:** PostgreSQL-backed integration suite; fresh-clone Compose migrations, health checks, and order creation; workbench synthetic flow; keyboard/accessibility and narrow-screen checks. See `PROJECT_STATUS.md`.
 - **Verified with PayPal Sandbox:** USD $1 buyer-approved order, server-side capture, persisted paid status/capture ID, verified/correlated/processed `PAYMENT.CAPTURE.COMPLETED` webhook, and a subsequent provider refresh that returned `COMPLETED` with matching local state.
 - **Implemented but not externally verified:** live OpenAI Responses API investigation path; full Live API operator journey through the workbench and broader error-state review.
-- **Required before submission:** decide whether to proceed without live AI evidence; do not claim a live model-backed feature that was not exercised. Ensure judges have a functional demo through the hosted URL or complete setup instructions; record and publish the public demo video; complete owner review and final eligibility/rules check.
+- **Required before submission:** keep the live AI limitation explicit and do not claim a model-backed feature that was not exercised. Ensure judges have a functional demo through the hosted URL or complete setup instructions; record and publish the public demo video; complete owner review and final eligibility/rules check. The owner has chosen to proceed despite the unverified AI gap and accepts the associated eligibility risk; this does not guarantee compliance or acceptance by the judges.
 
 ## PayPal and AI disclosure
 
@@ -61,7 +61,7 @@ Further work merged on 5 November includes the [evidence-first workbench and cap
 - [x] Owner confirmed rights and selected MIT; root license and third-party notices are present.
 - [x] Complete a real Sandbox checkout/capture and verify the processed webhook; the USD $1 flow and persisted paid status/capture ID were checked on 9 November 2026. Repeatability and provider refresh remain tracked in #4; no secrets or buyer details are recorded here.
 - [ ] Complete and record the Live API operator journey and evidence review.
-- [ ] Live AI investigation remains unverified by owner choice. Before submitting, make an explicit go/no-go decision about proceeding without live AI evidence; the hackathon requires an AI tool/model/platform, and the project must not claim this requirement has been demonstrated.
+- [x] Owner chose to proceed toward submission with live AI unverified and the gap disclosed. Do not claim the hackathon AI integration requirement has been demonstrated; judges determine eligibility.
 - [ ] Re-run clean-clone instructions and ensure judges can access the working project without restrictions through judging.
 - [ ] Record a public YouTube demonstration under three minutes, showing PayPal and AI working end to end, using permitted media and no secrets.
 - [ ] Replace draft wording with claims supported by the final verified build; confirm the Devpost countdown/rules and required fields.

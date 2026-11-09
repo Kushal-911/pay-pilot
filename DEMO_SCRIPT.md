@@ -23,7 +23,7 @@ Only include this segment from a separate local Live API recording after recheck
 
 ### 2:10–2:40 — AI and limits (replace only after verification)
 
-The OpenAI Responses API adapter is implemented, but a live model-backed investigation has not yet been verified. Do not say the product has a demonstrated live AI feature until issue #21 is complete. After a successful, redacted verification, show one investigation grounded in persisted order evidence, identify the model accurately, and explain that its tools are read-only while deterministic checks remain authoritative. If that evidence is not available, state plainly that AI runtime validation remains incomplete; the owner must decide whether the entry can proceed under the official rules.
+The OpenAI Responses API adapter is implemented, but the owner chose not to configure API access and no live model-backed investigation has been verified. The owner has decided to proceed toward submission with this gap disclosed, despite the eligibility risk under the official rules. State that plainly; do not claim the project demonstrated a live AI feature or the required AI integration. If live AI is later verified, replace this segment with a redacted investigation grounded in persisted order evidence, identify the model accurately, and explain that its tools are read-only while deterministic checks remain authoritative.
 
 ### 2:40–2:55 — Close
 
