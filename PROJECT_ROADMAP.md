@@ -1,6 +1,6 @@
 # PayPilot delivery roadmap and issue register
 
-**Updated:** 5 November 2026  
+**Updated:** 9 November 2026
 **Repository:** [Kushal-911/pay-pilot](https://github.com/Kushal-911/pay-pilot)  
 **Product requirements:** [PRD.md](PRD.md)  
 **Hackathon deadline currently published:** 12 November 2026, 12:00 p.m. PST / 13 November 2026, 1:30 a.m. IST. Recheck the [official Devpost rules](https://paypalaihackathon.devpost.com/rules) and countdown before submission.
@@ -9,11 +9,11 @@ This is the durable index for the complete planned lifecycle. V0 is the foundati
 
 ## Current status
 
-- **V0 code exists; runtime proof is incomplete.** The repository contains the Go/Gin API, PostgreSQL migrations, PayPal Sandbox adapter, idempotency, safe unknown-capture behavior, webhook verification/deduplication, evidence-bounded investigations, embedded workbench, synthetic demo, and API artifacts. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the verification gaps.
-- **UI implementation is substantially present.** Demo and Live API workflows, order queue/detail, payment timeline, investigation view, and new-payment flow exist. That does not make the end-to-end product complete: PostgreSQL/Sandbox/runtime evidence is still required.
-- **Feature work in review:** [PR #9](https://github.com/Kushal-911/pay-pilot/pull/9) is open and unmerged. It covers safer payment actions, provider event timeline, truthful Live API navigation/metrics, claim-level AI evidence, capture amount/currency verification, and bounded PayPal requests/responses. Branch commit `3b8a7bb` passes `go test ./...`, `go vet ./...`, and `git diff --check`. Issues #1, #2, #5, #7, #16, and #17 retain integration/runtime acceptance.
-- **Unfinished V1 gates:** clean database-backed run; real Sandbox buyer checkout and webhook path; verified safe recovery; API contract synchronization; clean-clone run; owner-confirmed license; submission description; public demo video; final requirements check. Docker cannot connect to its local daemon, database URL variables and PayPal Sandbox credentials are absent, so database and provider runtime gates are blocked in this environment. The duplicate route in PR #9 has been removed in commit `5aa515e`; startup verification remains open in #62.
-- **Backlog:** 61 GitHub issues are open in the repo, including this index's original issues #1–#8 and 53 newly created work/epic issues #10–#62. Pull request #9 occupies the number between them.
+- **V0 foundation is implemented and locally verified.** The repository contains the Go/Gin API, PostgreSQL migrations, PayPal Sandbox adapter, idempotency, safe unknown-capture behavior, webhook verification/deduplication, evidence-bounded investigations, embedded workbench, synthetic demo, and API artifacts. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for verification details.
+- **UI implementation is substantially present.** Demo and Live API workflows, order queue/detail, payment timeline, investigation view, and new-payment flow exist. A complete Live API operator recovery journey remains open.
+- **Core feature PR #9 is merged.** It added safer payment actions, provider event timeline, truthful Live API navigation/metrics, claim-level AI evidence, capture amount/currency verification, and bounded PayPal requests/responses. PostgreSQL integration coverage and CI checks have passed; remaining acceptance is tracked in the linked V1 issues.
+- **Verified external and hosted paths:** a real USD $1 Sandbox buyer checkout, server-side capture, persisted paid state, and processed verified capture webhook succeeded on 9 November. The synthetic-only Render judge demo is live at https://paypilot-hackathon-demo.onrender.com; its readiness check returns 200 and its payment API routes are absent. GitHub issues #15, #27, and #33 are complete.
+- **Unfinished V1 submission gates:** provider refresh/recovery and full Live API operator journey (#4, #14, #19); live AI investigation (#21), which the owner has chosen not to configure; clean-clone and API contract checks; sub-three-minute public video (#29); final owner go/no-go and Devpost submission (#6, #28). MIT has been owner-approved and added at the root; third-party font and dependency notes are in `THIRD_PARTY_NOTICES.md`.
 
 ## Phases and completion criteria
 
@@ -21,14 +21,14 @@ This is the durable index for the complete planned lifecycle. V0 is the foundati
 |---|---|---|
 | V0 — Foundation | [#58](https://github.com/Kushal-911/pay-pilot/issues/58) | Accurately document the baseline and its tested versus unverified behavior. V0 is not proof of a working external integration. |
 | V1 — Hackathon MVP | [#59](https://github.com/Kushal-911/pay-pilot/issues/59) | Fresh-clone run, PostgreSQL-backed lifecycle, real Sandbox checkout and webhook evidence, safe ambiguous-outcome recovery, evidence-grounded investigation or explicit deterministic fallback, consistent API docs, owner-approved license, accurate submission and public video. |
-| V2 — Judge Demo | [#60](https://github.com/Kushal-911/pay-pilot/issues/60) | Optional isolated synthetic hosted demo, reset and observed usability improvements. Start only after V1; V2 must not delay V1. |
+| V2 — Judge Demo | [#60](https://github.com/Kushal-911/pay-pilot/issues/60) | Isolated synthetic hosted demo is deployed (#33); remaining work is optional reset and usability improvements. Start only after V1; V2 must not delay V1. |
 | V3 — Production Readiness | [#61](https://github.com/Kushal-911/pay-pilot/issues/61) | Security, tenant isolation, privacy, reliability, operational and deployment gates evidenced before real customer data or a production claim. This is long-horizon scope, not a hackathon promise. |
 
-**Native GitHub milestones are not created.** The connected GitHub issue controls can create/update issues and apply existing labels, but do not expose milestone creation, custom label creation, or Projects v2 management. The repo Milestones page also showed a signed-out state. The four issues above are clearly titled milestone epics and all work issues carry phase tags. Once milestone administration is available, create exact milestone names `V0 — Foundation`, `V1 — Hackathon MVP`, `V2 — Judge Demo`, and `V3 — Production Readiness`, then bulk-assign issues by title tag. No issue is falsely presented as having a native milestone assignment.
+**Native GitHub milestones are not created.** The connected GitHub issue controls can create/update issues and apply existing labels, but do not expose milestone creation, custom label creation, or Projects v2 management. The four issues above are clearly titled milestone epics and all work issues carry phase tags. Once milestone administration is available, create exact milestone names `V0 — Foundation`, `V1 — Hackathon MVP`, `V2 — Judge Demo`, and `V3 — Production Readiness`, then bulk-assign issues by title tag. No issue is falsely presented as having a native milestone assignment.
 
 ## Priority and sequencing
 
-- **V1 P0 — required before submission:** #1–#4, #6 and #10–#18, #25–#29, #62. #1/#2 have implementation in PR #9; #3/#4 and runtime evidence remain open. #62 tracks startup verification for the duplicate route removed from PR #9 in commit `5aa515e`. Owner-only license and submission actions remain explicit blockers.
+- **V1 P0 — required before submission:** #1–#4, #6 and #10–#18, #25–#29, #62. PR #9 is merged; #14 remains open until a provider refresh is verified. #15 and #27 are complete. The owner-approved MIT license is present. The public video, live AI go/no-go, and Devpost submission remain open.
 - **V1 P1 — polish/evidence:** #5, #7, #19–#24 and #30–#31. Confirm the live journey, model failure behavior, accessibility/responsive behavior, synthetic demo repeatability, user observations where feasible, and current event rules.
 - **V2 — after V1 only:** #32–#36. Hosted demo must be synthetic/read-only and isolated.
 - **V3 — production path:** #37–#57. These tasks address the current local prototype's lack of authentication/tenant isolation and add payment operations, privacy, reliability and security controls.
@@ -38,7 +38,7 @@ This is the durable index for the complete planned lifecycle. V0 is the foundati
 
 New work issues use the repository's existing GitHub type labels: `enhancement`, `bug`, or `documentation`. Version, priority, and work area are encoded in issue titles, such as `[V1][P0][payments]`. No custom label names are claimed or fabricated. Priority/phase/area labels can be added later if repo label administration is enabled.
 
-Issues are not assigned to a person because no confirmed assignee mapping was provided. Owner-only decisions (license, credentials, hosted account and Devpost/video publishing) are called out as dependencies rather than guessed.
+Issues are not assigned to a person because no confirmed assignee mapping was provided. Owner-controlled tasks (AI access/go-no-go, eligibility, and Devpost/video publishing) are tracked as dependencies rather than guessed.
 
 ## V1 — Hackathon MVP and submission
 
