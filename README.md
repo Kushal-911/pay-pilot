@@ -63,3 +63,7 @@ Import the Postman collection and set `baseUrl` to your local API. Send **Health
 - Demo recording walkthrough: `DEMO_SCRIPT.md`
 
 The PayPal Sandbox API is not exercised by local tests; configure Sandbox credentials and accounts to complete the provider flow. Never use production credentials in local development.
+
+## License
+
+PayPilot's original code is licensed under the [MIT License](LICENSE). Third-party assets and dependency notices are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md); those works remain under their respective licenses.

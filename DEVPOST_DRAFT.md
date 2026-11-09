@@ -1,6 +1,6 @@
 # Devpost submission draft
 
-**State:** Updated 9 November 2026. **Draft only; not ready to submit.** The PayPal Sandbox checkout/capture/webhook and synthetic hosted demo have now been verified. OpenAI live-model evidence, owner-approved license, public video, owner review, and final rules check remain submission gates.
+**State:** Updated 9 November 2026. **Draft only; not ready to submit.** The PayPal Sandbox checkout/capture/webhook and synthetic hosted demo have now been verified, and the owner-approved MIT license is included. Live OpenAI evidence, public video, owner review, and final rules check remain submission gates. The entrant must decide whether to proceed without live AI evidence; do not imply that the requirement has been demonstrated.
 
 ## Project name
 
@@ -25,7 +25,7 @@ The browser-only guided scenario demonstrates an ambiguous capture and safe reco
 - **Verified locally:** PostgreSQL-backed integration suite; fresh-clone Compose migrations, health checks, and order creation; workbench synthetic flow; keyboard/accessibility and narrow-screen checks. See `PROJECT_STATUS.md`.
 - **Verified with PayPal Sandbox:** USD $1 buyer-approved order, server-side capture, persisted paid status/capture ID, and verified, correlated, processed `PAYMENT.CAPTURE.COMPLETED` webhook.
 - **Implemented but not externally verified:** live OpenAI Responses API investigation path; broader Live API operator refresh/recovery journey.
-- **Required before submission:** demonstrate a meaningful live AI investigation grounded in persisted evidence (or verify the applicable rules and do not claim AI functionality that was not exercised); obtain the owner-approved open-source license; ensure judges have a functional demo through a hosted URL or proven setup instructions; record and publish the public demo video; complete owner review and final eligibility/rules check.
+- **Required before submission:** decide whether to proceed without live AI evidence; do not claim a live model-backed feature that was not exercised. Ensure judges have a functional demo through the hosted URL or complete setup instructions; record and publish the public demo video; complete owner review and final eligibility/rules check.
 
 ## PayPal and AI disclosure
 
@@ -53,15 +53,15 @@ Further work merged on 5 November includes the [evidence-first workbench and cap
 - **Functional demo access:** follow the clean setup and run instructions in [`README.md`](README.md). Start the local Compose database/API and open the embedded workbench. Select **Demo** for the synthetic walkthrough; it is the verified path that does not require external credentials. Judges need a Docker-capable environment to run the full stack.
 - **Hosted demo URL:** https://paypilot-hackathon-demo.onrender.com — synthetic browser-only simulation; no live PayPal or AI calls and no money moved. The service can sleep while idle and take about a minute to wake; see `DEPLOYMENT.md`.
 - **Public YouTube video (<3 minutes):** pending; add the final public URL only after the recording shows the actual app functioning and all labels/claims have been checked.
-- **Visible open-source license:** pending owner decision in issue #26. Do not submit before the repository has the owner-approved license visible as required by Devpost.
+- **Visible open-source license:** MIT, owner-approved and present at [`LICENSE`](LICENSE); third-party font and dependency notices are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Submission checklist
 
 - [ ] Owner verifies eligibility for every entrant and confirms authority to submit.
-- [ ] Owner selects the license and confirms ownership/third-party asset rights; root license is added and visible.
+- [x] Owner confirmed rights and selected MIT; root license and third-party notices are present.
 - [x] Complete a real Sandbox checkout/capture and verify the processed webhook; the USD $1 flow and persisted paid status/capture ID were checked on 9 November 2026. Repeatability and provider refresh remain tracked in #4; no secrets or buyer details are recorded here.
 - [ ] Complete and record the Live API operator journey and evidence review.
-- [ ] Verify and demonstrate a meaningful live AI investigation with an approved key. If it cannot be completed, do not claim the project satisfies the event's AI integration requirement; make an explicit owner go/no-go decision.
+- [ ] Live AI investigation remains unverified by owner choice. Make an explicit owner go/no-go decision about submitting without live AI evidence; do not claim the hackathon AI integration requirement has been demonstrated.
 - [ ] Re-run clean-clone instructions and ensure judges can access the working project without restrictions through judging.
 - [ ] Record a public YouTube demonstration under three minutes, showing PayPal and AI working end to end, using permitted media and no secrets.
 - [ ] Replace draft wording with claims supported by the final verified build; confirm the Devpost countdown/rules and required fields.

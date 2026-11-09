@@ -41,6 +41,7 @@ Status legend: `[x]` verified complete, `[~]` implemented or partially complete 
 ## Day 6 — Testing, documentation, deployment (P0/P1)
 - [ ] Add reproducible fixtures and test critical success/failure/timeout/duplicate/discrepancy paths.
 - [ ] Finalize OpenAPI, Postman, setup docs, license, and architecture docs.
+- [x] Owner-approved root MIT license added; third-party font/dependency notices recorded.
 - [ ] Evaluate APIMatic and Render only if stable and feasible.
 - [ ] Validate clean-environment setup.
 - Acceptance: core workflow passes repeatable tests and demo is reliable.
