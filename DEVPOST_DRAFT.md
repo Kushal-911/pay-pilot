@@ -1,6 +1,6 @@
 # Devpost submission draft
 
-**State:** Draft prepared 5 November 2026. **Not ready to submit.** Replace the pending fields and recheck every claim after the PayPal Sandbox, Live API, licensing, and video gates pass. Do not paste this draft into Devpost as a claim of completed live integration.
+**State:** Updated 9 November 2026. **Draft only; not ready to submit.** The PayPal Sandbox checkout/capture/webhook has now been verified. OpenAI live-model evidence, owner-approved license, final public demo URL or complete clean-run instructions, public video, owner review, and final rules check remain submission gates.
 
 ## Project name
 
@@ -18,18 +18,19 @@ PayPilot is a local-first merchant workbench for inspecting that uncertainty. It
 
 Operators can inspect an order-scoped timeline and request an investigation. The backend always runs deterministic record checks. When configured, an OpenAI Responses API adapter can use bounded, read-only evidence tools; its output is validated against order evidence and cannot change payment state. If model output is unavailable or invalid, the product labels and returns the deterministic fallback.
 
-The browser-only guided scenario demonstrates an ambiguous capture and safe recovery with synthetic records. It is explicitly labeled synthetic, does not call PayPal or an AI service, and moves no money. **A real PayPal Sandbox checkout/webhook and live OpenAI investigation have not yet been verified.** The project is a prototype, has no merchant authentication or tenant isolation, and must not be used with production credentials or real merchant data.
+The browser-only guided scenario demonstrates an ambiguous capture and safe recovery with synthetic records. It is explicitly labeled synthetic, does not call PayPal or an AI service, and moves no money. Separately, on 9 November 2026, a USD $1 PayPal Sandbox order completed buyer approval and server-side capture; PayPilot persisted the paid state and processed the matching `PAYMENT.CAPTURE.COMPLETED` webhook. This does not demonstrate a live-money payment. The project is a prototype, has no merchant authentication or tenant isolation, and must not be used with production credentials or real merchant data.
 
 ## What is working and what remains unverified
 
 - **Verified locally:** PostgreSQL-backed integration suite; fresh-clone Compose migrations, health checks, and order creation; workbench synthetic flow; keyboard/accessibility and narrow-screen checks. See `PROJECT_STATUS.md`.
-- **Implemented but not externally verified:** PayPal Sandbox API adapter and webhook verification path; live OpenAI Responses API path.
-- **Required before a credible submission:** complete a real Sandbox buyer-approved checkout and reachable verified webhook flow; validate the full Live API operator journey; demonstrate a meaningful live AI investigation grounded in persisted evidence (a deterministic fallback alone does not establish the required AI integration); obtain the owner-approved open-source license; record and publish the public demo video; perform final eligibility/rules review.
+- **Verified with PayPal Sandbox:** USD $1 buyer-approved order, server-side capture, persisted paid status/capture ID, and verified, correlated, processed `PAYMENT.CAPTURE.COMPLETED` webhook.
+- **Implemented but not externally verified:** live OpenAI Responses API investigation path; broader Live API operator refresh/recovery journey.
+- **Required before submission:** demonstrate a meaningful live AI investigation grounded in persisted evidence (or verify the applicable rules and do not claim AI functionality that was not exercised); obtain the owner-approved open-source license; ensure judges have a functional demo through a hosted URL or proven setup instructions; record and publish the public demo video; complete owner review and final eligibility/rules check.
 
 ## PayPal and AI disclosure
 
-- **PayPal:** PayPal Developer Platform Orders v2 Sandbox adapter for order creation, capture, provider refresh, and webhook verification. Adapter code and fake-provider tests exist; no live Sandbox checkout or webhook has yet been completed.
-- **AI:** optional OpenAI Responses API adapter for evidence-bounded investigation. Deterministic checks remain authoritative and are the fallback. The live OpenAI integration has not yet been run with an owner-provided key. The synthetic browser scenario does not invoke an AI model.
+- **PayPal:** PayPal Developer Platform Orders v2 Sandbox adapter for order creation, capture, provider refresh, and webhook verification. A USD $1 Sandbox buyer checkout, server-side capture, and processed capture-completed webhook were verified on 9 November 2026. No live-money transaction is part of this project.
+- **AI:** optional OpenAI Responses API adapter for evidence-bounded investigation. Deterministic checks remain authoritative and are the fallback. The live OpenAI integration has not yet been verified. The synthetic browser scenario does not invoke an AI model.
 - **Sponsor tools/prizes:** no sponsor-specific tool or sponsor prize is currently selected or claimed.
 
 ## Who it is for and why it matters

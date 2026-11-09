@@ -1,16 +1,16 @@
 # Project Status
 
-## Snapshot — 2026-11-05
+## Snapshot — 2026-11-09
 
-PayPilot has a working local prototype with a responsive workbench, Go/Gin API, PostgreSQL persistence, deterministic investigation fallback, PayPal Sandbox adapter, verified webhook handler, and guarded capture recovery. The full local stack and core database paths have now been exercised against fresh PostgreSQL 16 databases. A real PayPal Sandbox checkout and live OpenAI investigation have not been run because account credentials are not available.
+PayPilot has a working local prototype with a responsive workbench, Go/Gin API, PostgreSQL persistence, deterministic investigation fallback, PayPal Sandbox adapter, verified webhook handler, and guarded capture recovery. The full local stack and core database paths have been exercised against fresh PostgreSQL 16 databases. On 9 November, a real USD $1 PayPal Sandbox checkout completed buyer approval, server-side capture, and webhook processing; the corresponding order/payment and `PAYMENT.CAPTURE.COMPLETED` event were persisted and verified locally. A live OpenAI investigation has not yet been run.
 
-**Delivery status:** V0 foundation is implemented and locally verified. V1 hackathon MVP is partially complete: the UI and local API/DB demo work, while real provider/model validation and owner-controlled submission assets remain. The V1 workbench accessibility and narrow-screen checks (#22, #23) are complete. Do not describe this prototype as production-ready; it has no merchant authentication or tenant isolation.
+**Delivery status:** V0 foundation is implemented and locally verified. V1 hackathon MVP is partially complete: the UI, local API/DB flow, and one complete PayPal Sandbox checkout/capture/webhook run work. Live OpenAI validation, broader operator recovery checks, and owner-controlled submission assets remain. The V1 workbench accessibility and narrow-screen checks (#22, #23) are complete. Do not describe this prototype as production-ready; it has no merchant authentication or tenant isolation.
 
 ## What works
 
 - Embedded workbench with Synthetic Demo and Live API modes, payment queue/detail, order creation, event timeline, investigation evidence, and provider status/recovery actions.
 - Go/Gin API with PostgreSQL-backed orders, payment attempts, idempotency records, investigations, and sanitized provider-event history.
-- PayPal adapter for OAuth, order creation, capture, refresh, and signature verification. Fake-provider integration tests exercise these contracts; no live PayPal Sandbox request has been made.
+- PayPal adapter for OAuth, order creation, capture, refresh, and signature verification. A real Sandbox payment and verified webhook were completed end to end on 2026-11-09; prior fake-provider integration tests cover failure and recovery contracts.
 - Capture ambiguity persists as `unknown`. A database-backed test proves a provider refresh is required before capture is eligible again.
 - Webhook signature rejection, event deduplication, amount/currency mismatch handling, and completed-state monotonicity are covered against PostgreSQL using a deterministic verification transport.
 - Liveness (`/livez`) is separate from database readiness (`/readyz`); `/health` remains a compatibility alias for readiness.
@@ -25,7 +25,8 @@ The following passed on 2026-11-05:
 - A fresh isolated Compose project built the API image, applied migrations 001–003 to a new PostgreSQL volume, started the API after the database health check, returned 200 from `/livez`, `/readyz`, and `/health`, and returned 201 from a database-backed order creation request. The temporary project, network, and volume were removed afterward.
 - Docker Engine 29.4.0; Postgres image `postgres:16-alpine`; Node v22.14.0.
 - Workbench browser review covered the synthetic recovery walkthrough, keyboard payment selection, reset cancellation, and a tablet-width layout. Demo reset was clicked repeatedly and during a running animation; it restored the seeded browser-local scenario, canceled the animation, and reported that no provider calls were made. It does not touch the API or database; see `DEMO_SCRIPT.md` and issue #34. After PR #71, viewport checks at 320, 360, 390, and 640px confirmed that the document does not overflow horizontally, the payment detail fits, and the queue scrolls within its own container. A rendered text contrast scan found no text below 4.5:1 at the audited layout. GitHub issues #22 and #23 are closed; #34 is now verified.
-- **Live API browser partial check (5 Nov):** a new isolated Compose project loaded a synthetic persisted order in the embedded UI; the API label/status and detail timeline rendered correctly, aggregate metrics showed unavailable instead of synthetic values, and a deterministic investigation was saved to PostgreSQL and cited the order record. The empty-attempt refresh guard was readable and made no provider request. This is not a complete provider journey; real Sandbox checkout/refresh/webhook, live AI, and broader error-state checks remain open in #19.
+- **Live API browser partial check (5 Nov):** a new isolated Compose project loaded a synthetic persisted order in the embedded UI; the API label/status and detail timeline rendered correctly, aggregate metrics showed unavailable instead of synthetic values, and a deterministic investigation was saved to PostgreSQL and cited the order record. The empty-attempt refresh guard was readable and made no provider request. This is not a complete operator journey; provider refresh/recovery in the UI, live AI, and broader error-state checks remain open in #19.
+- **PayPal Sandbox end-to-end check (9 Nov):** a USD $1 test order completed through PayPal buyer approval and server-side capture. PayPilot persisted the order as paid, recorded the provider capture ID, and received, verified, correlated, and marked the `PAYMENT.CAPTURE.COMPLETED` webhook as processed. This proves the Sandbox checkout/capture/webhook path for this test; it does not establish production readiness or replace repeatability/refresh/error-state checks.
 
 ## Reproducing local startup and PostgreSQL integration checks
 
@@ -55,7 +56,7 @@ The idempotency claim timeout is two minutes; completed idempotency responses ha
 
 ## Remaining work and gates
 
-- **External provider proof:** configure PayPal Sandbox business/buyer credentials and a reachable HTTPS webhook URL; complete buyer approval, capture, refresh, and provider webhook flow. No credentials or customer data are present in this repository.
+- **External provider proof:** the real Sandbox buyer approval, capture, and webhook flow is verified. Repeat the flow after deployment/configuration changes and complete the remaining Live API UI refresh/recovery checks in #19. No credentials or customer data are present in this repository.
 - **AI proof:** configure an approved OpenAI API key/model and verify the live Responses API path; deterministic fallback is available and covered by tests.
 - **UI review:** V1 keyboard/accessibility and phone/tablet layout checks are complete (#22, #23). Revisit accessibility during future feature work and broaden automated coverage beyond the completed manual/browser audit.
 - **Submission package:** owner must select/approve the license and provide account-owned Devpost/video actions; accuracy checks, final demo recording, and deadline recheck remain before submission.
