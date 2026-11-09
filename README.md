@@ -8,6 +8,10 @@ The same Go service serves an embedded, responsive merchant workbench at `http:/
 
 Choose **Live API** to read orders and investigations from the Go API and use PayPal Sandbox checkout, capture, refresh, and the configured investigation model. Live API requires the database and server; Sandbox actions additionally require PayPal Sandbox credentials. No automatic fallback disguises API failures as live data.
 
+## Public hosted demo
+
+The public deployment is intentionally synthetic-only. Set `PUBLIC_DEMO_MODE=true` to serve the browser workbench without a database or provider credentials; live API routes are not registered in this mode. The Render configuration is in [`render.yaml`](render.yaml), and setup, limitations, and verification steps are in [`DEPLOYMENT.md`](DEPLOYMENT.md). Do not add merchant data, PayPal credentials, or AI keys to the public demo service.
+
 ## Run locally
 
 1. Copy `.env.example` to `.env` if you want to configure PayPal Sandbox client credentials, checkout return/cancel URLs, and `PAYPAL_WEBHOOK_ID`. To enable model-assisted investigation, also set `OPENAI_API_KEY` and `OPENAI_MODEL`; otherwise reports use deterministic record checks. These credentials are not needed to start the local app.
