@@ -59,7 +59,7 @@ Further work merged on 5 November includes the [evidence-first workbench and cap
 
 - [ ] Owner verifies eligibility for every entrant and confirms authority to submit.
 - [ ] Owner selects the license and confirms ownership/third-party asset rights; root license is added and visible.
-- [ ] Complete and record real Sandbox checkout/capture and webhook verification; redact secrets and test-account details.
+- [x] Complete a real Sandbox checkout/capture and verify the processed webhook; the USD $1 flow and persisted paid status/capture ID were checked on 9 November 2026. Repeatability and provider refresh remain tracked in #4; no secrets or buyer details are recorded here.
 - [ ] Complete and record the Live API operator journey and evidence review.
 - [ ] Verify and demonstrate a meaningful live AI investigation with an approved key. If it cannot be completed, do not claim the project satisfies the event's AI integration requirement; make an explicit owner go/no-go decision.
 - [ ] Re-run clean-clone instructions and ensure judges can access the working project without restrictions through judging.
@@ -69,7 +69,7 @@ Further work merged on 5 November includes the [evidence-first workbench and cap
 
 ## Official source checks
 
-Rules and event facts were rechecked 5 November 2026; the official rules page controls if sources conflict or change:
+The official rules and deadline were rechecked 9 November 2026; the rules list 12 November 2026 at 12:00 p.m. Pacific Standard Time. The official rules page controls if sources conflict or change. The gallery status has not been rechecked since 5 November:
 
 - [PayPal AI Hackathon event page](https://paypalaihackathon.devpost.com/)
 - [Official rules](https://paypalaihackathon.devpost.com/rules)
