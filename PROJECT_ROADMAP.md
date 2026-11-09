@@ -13,7 +13,7 @@ This is the durable index for the complete planned lifecycle. V0 is the foundati
 - **UI implementation is substantially present.** Demo and Live API workflows, order queue/detail, payment timeline, investigation view, and new-payment flow exist. A complete Live API operator recovery journey remains open.
 - **Core feature PR #9 is merged.** It added safer payment actions, provider event timeline, truthful Live API navigation/metrics, claim-level AI evidence, capture amount/currency verification, and bounded PayPal requests/responses. PostgreSQL integration coverage and CI checks have passed; remaining acceptance is tracked in the linked V1 issues.
 - **Verified external and hosted paths:** a real USD $1 Sandbox buyer checkout, server-side capture, persisted paid state, and processed verified capture webhook succeeded on 9 November. The synthetic-only Render judge demo is live at https://paypilot-hackathon-demo.onrender.com; its readiness check returns 200 and its payment API routes are absent. GitHub issues #15, #27, and #33 are complete.
-- **Unfinished V1 submission gates:** provider refresh/recovery and full Live API operator journey (#4, #14, #19); live AI investigation (#21), which the owner has chosen not to configure; clean-clone and API contract checks; sub-three-minute public video (#29); final owner go/no-go and Devpost submission (#6, #28). MIT has been owner-approved and added at the root; third-party font and dependency notes are in `THIRD_PARTY_NOTICES.md`.
+- **Unfinished V1 submission gates:** repeatable clean setup and full Live API UI recovery journey (#4, #19); live AI investigation (#21), which the owner has chosen not to configure; clean-clone and API contract checks; sub-three-minute public video (#29); final owner go/no-go and Devpost submission (#6, #28). Provider checkout/capture/webhook/refresh API evidence is complete (#14 and #15). MIT has been owner-approved and added at the root; third-party font and dependency notes are in `THIRD_PARTY_NOTICES.md`.
 
 ## Phases and completion criteria
 
@@ -28,7 +28,7 @@ This is the durable index for the complete planned lifecycle. V0 is the foundati
 
 ## Priority and sequencing
 
-- **V1 P0 — required before submission:** #1–#4, #6 and #10–#18, #25–#29, #62. PR #9 is merged; #14 remains open until a provider refresh is verified. #15 and #27 are complete. The owner-approved MIT license is present. The public video, live AI go/no-go, and Devpost submission remain open.
+- **V1 P0 — required before submission:** #1–#4, #6 and #10–#18, #25–#29, #62. PR #9 is merged; #14 and #15 are complete. #4/#19 remain open for repeatable full Live API UI recovery. #27 and #26 are complete, and the owner-approved MIT license is present. The public video, live AI go/no-go, and Devpost submission remain open.
 - **V1 P1 — polish/evidence:** #5, #7, #19–#24 and #30–#31. Confirm the live journey, model failure behavior, accessibility/responsive behavior, synthetic demo repeatability, user observations where feasible, and current event rules.
 - **V2 — after V1 only:** #32–#36. Hosted demo must be synthetic/read-only and isolated.
 - **V3 — production path:** #37–#57. These tasks address the current local prototype's lack of authentication/tenant isolation and add payment operations, privacy, reliability and security controls.

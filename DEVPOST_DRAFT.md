@@ -23,8 +23,8 @@ The browser-only guided scenario demonstrates an ambiguous capture and safe reco
 ## What is working and what remains unverified
 
 - **Verified locally:** PostgreSQL-backed integration suite; fresh-clone Compose migrations, health checks, and order creation; workbench synthetic flow; keyboard/accessibility and narrow-screen checks. See `PROJECT_STATUS.md`.
-- **Verified with PayPal Sandbox:** USD $1 buyer-approved order, server-side capture, persisted paid status/capture ID, and verified, correlated, processed `PAYMENT.CAPTURE.COMPLETED` webhook.
-- **Implemented but not externally verified:** live OpenAI Responses API investigation path; broader Live API operator refresh/recovery journey.
+- **Verified with PayPal Sandbox:** USD $1 buyer-approved order, server-side capture, persisted paid status/capture ID, verified/correlated/processed `PAYMENT.CAPTURE.COMPLETED` webhook, and a subsequent provider refresh that returned `COMPLETED` with matching local state.
+- **Implemented but not externally verified:** live OpenAI Responses API investigation path; full Live API operator journey through the workbench and broader error-state review.
 - **Required before submission:** decide whether to proceed without live AI evidence; do not claim a live model-backed feature that was not exercised. Ensure judges have a functional demo through the hosted URL or complete setup instructions; record and publish the public demo video; complete owner review and final eligibility/rules check.
 
 ## PayPal and AI disclosure
