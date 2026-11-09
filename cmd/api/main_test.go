@@ -36,3 +36,35 @@ func TestLivenessAndReadinessAreDistinct(t *testing.T) {
 		t.Fatalf("legacy health alias status = %d, want database readiness status", legacyHealth.Code)
 	}
 }
+
+func TestPublicDemoIsSyntheticAndDoesNotExposeLiveAPI(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := newPublicDemoRouter()
+
+	ready := httptest.NewRecorder()
+	router.ServeHTTP(ready, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if ready.Code != http.StatusOK || !strings.Contains(ready.Body.String(), `"mode":"synthetic-demo"`) {
+		t.Fatalf("public demo readiness = %d %s", ready.Code, ready.Body)
+	}
+
+	page := httptest.NewRecorder()
+	router.ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/", nil))
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "PAYPILOT_PUBLIC_DEMO=true") {
+		t.Fatalf("public demo page = %d; demo mode flag missing", page.Code)
+	}
+
+	for _, request := range []struct{ method, path string }{
+		{http.MethodGet, "/api/v1/orders"},
+		{http.MethodPost, "/api/v1/orders"},
+		{http.MethodPost, "/api/v1/orders/order-id/paypal-order"},
+		{http.MethodPost, "/api/v1/payments/payment-id/capture"},
+		{http.MethodPost, "/api/v1/webhooks/paypal"},
+		{http.MethodPost, "/api/v1/investigations"},
+	} {
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(request.method, request.path, nil))
+		if response.Code != http.StatusNotFound {
+			t.Errorf("public demo route %s %s status = %d, want 404", request.method, request.path, response.Code)
+		}
+	}
+}

@@ -661,5 +661,13 @@ function bindEvents() {
   $("#mobile-menu").addEventListener("click", () => { $("#sidebar").classList.toggle("open"); $(".main-area").classList.toggle("menu-open"); });
 }
 
+if (window.PAYPILOT_PUBLIC_DEMO) {
+  $("#live-mode")?.remove();
+  $("#new-order-button")?.remove();
+  $("#help-modal .live-mark")?.closest(".help-row")?.remove();
+  const warning = $("#help-modal .help-warning");
+  if (warning) warning.textContent = "Public demo uses synthetic, browser-only payment records. No PayPal API or merchant data is connected.";
+}
+
 bindEvents();
 renderAll();

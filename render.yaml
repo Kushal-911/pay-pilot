@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: paypilot-hackathon-demo
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /readyz
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: GIN_MODE
+        value: release
+      - key: PUBLIC_DEMO_MODE
+        value: "true"
