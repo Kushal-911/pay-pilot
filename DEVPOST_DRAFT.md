@@ -30,7 +30,7 @@ The browser-only guided scenario demonstrates an ambiguous capture and safe reco
 ## PayPal and AI disclosure
 
 - **PayPal:** PayPal Developer Platform Orders v2 Sandbox adapter for order creation, capture, provider refresh, and webhook verification. A USD $1 Sandbox buyer checkout, server-side capture, and processed capture-completed webhook were verified on 9 November 2026. No live-money transaction is part of this project.
-- **AI:** optional OpenAI Responses API adapter for evidence-bounded investigation. Deterministic checks remain authoritative and are the fallback. The live OpenAI integration has not yet been verified. The synthetic browser scenario does not invoke an AI model.
+- **AI:** an OpenAI Responses API adapter is implemented for evidence-bounded investigation. The owner chose not to configure OpenAI/API access, so no live model-backed investigation has been run. Deterministic checks remain authoritative and are the fallback; the synthetic browser scenario does not invoke an AI model. Do not present this as a demonstrated live AI integration.
 - **Sponsor tools/prizes:** no sponsor-specific tool or sponsor prize is currently selected or claimed.
 
 ## Who it is for and why it matters
@@ -61,7 +61,7 @@ Further work merged on 5 November includes the [evidence-first workbench and cap
 - [x] Owner confirmed rights and selected MIT; root license and third-party notices are present.
 - [x] Complete a real Sandbox checkout/capture and verify the processed webhook; the USD $1 flow and persisted paid status/capture ID were checked on 9 November 2026. Repeatability and provider refresh remain tracked in #4; no secrets or buyer details are recorded here.
 - [ ] Complete and record the Live API operator journey and evidence review.
-- [ ] Live AI investigation remains unverified by owner choice. Make an explicit owner go/no-go decision about submitting without live AI evidence; do not claim the hackathon AI integration requirement has been demonstrated.
+- [ ] Live AI investigation remains unverified by owner choice. Before submitting, make an explicit go/no-go decision about proceeding without live AI evidence; the hackathon requires an AI tool/model/platform, and the project must not claim this requirement has been demonstrated.
 - [ ] Re-run clean-clone instructions and ensure judges can access the working project without restrictions through judging.
 - [ ] Record a public YouTube demonstration under three minutes, showing PayPal and AI working end to end, using permitted media and no secrets.
 - [ ] Replace draft wording with claims supported by the final verified build; confirm the Devpost countdown/rules and required fields.

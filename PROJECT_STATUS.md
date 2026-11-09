@@ -2,7 +2,7 @@
 
 ## Snapshot — 2026-11-09
 
-PayPilot has a working local prototype with a responsive workbench, Go/Gin API, PostgreSQL persistence, deterministic investigation fallback, PayPal Sandbox adapter, verified webhook handler, and guarded capture recovery. The full local stack and core database paths have been exercised against fresh PostgreSQL 16 databases. On 9 November, a real USD $1 PayPal Sandbox checkout completed buyer approval, server-side capture, and webhook processing; the corresponding order/payment and `PAYMENT.CAPTURE.COMPLETED` event were persisted and verified locally. A live OpenAI investigation has not yet been run.
+PayPilot has a working local prototype with a responsive workbench, Go/Gin API, PostgreSQL persistence, deterministic investigation fallback, PayPal Sandbox adapter, verified webhook handler, and guarded capture recovery. The full local stack and core database paths have been exercised against fresh PostgreSQL 16 databases. On 9 November, a real USD $1 PayPal Sandbox checkout completed buyer approval, server-side capture, and webhook processing; the corresponding order/payment and `PAYMENT.CAPTURE.COMPLETED` event were persisted and verified locally. The owner chose not to configure OpenAI/API access, so no live model-backed investigation has been run.
 
 **Delivery status:** V0 foundation is implemented and locally verified. V1 hackathon MVP is partially complete: the UI, local API/DB flow, and one complete PayPal Sandbox checkout/capture/webhook run work. Live OpenAI validation, broader operator recovery checks, public video, and final account-owned submission remain. The owner approved MIT and the root license is present. The V1 workbench accessibility and narrow-screen checks (#22, #23) are complete. Do not describe this prototype as production-ready; it has no merchant authentication or tenant isolation.
 
@@ -59,7 +59,7 @@ The idempotency claim timeout is two minutes; completed idempotency responses ha
 ## Remaining work and gates
 
 - **External provider proof:** the real Sandbox buyer approval, capture, and webhook flow is verified. Repeat the flow after deployment/configuration changes and complete the remaining Live API UI refresh/recovery checks in #19. No credentials or customer data are present in this repository.
-- **AI proof:** configure an approved OpenAI API key/model and verify the live Responses API path; deterministic fallback is available and covered by tests.
+- **AI proof:** no live model-backed investigation is verified; the owner chose not to configure API access. The deterministic fallback is available and covered by tests, but is not evidence that a live AI integration ran.
 - **UI review:** V1 keyboard/accessibility and phone/tablet layout checks are complete (#22, #23). Revisit accessibility during future feature work and broaden automated coverage beyond the completed manual/browser audit.
 - **Submission package:** MIT is owner-approved and visible in the root `LICENSE`; see `THIRD_PARTY_NOTICES.md` for external fonts and dependency license policy. Live AI remains unverified by owner choice; video recording, eligibility/rights review, final Devpost actions, and deadline recheck remain before submission.
 - **Production scope:** authentication, tenant isolation, authorization, secret management, audit controls, retention policy, operational monitoring, backups, deployment hardening, and the production gate remain future milestones. Do not host real merchant data.
