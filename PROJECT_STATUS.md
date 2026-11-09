@@ -6,6 +6,8 @@ PayPilot has a working local prototype with a responsive workbench, Go/Gin API, 
 
 **Delivery status:** V0 foundation is implemented and locally verified. V1 hackathon MVP is partially complete: the UI, local API/DB flow, and one complete PayPal Sandbox checkout/capture/webhook run work. Live OpenAI validation, broader operator recovery checks, and owner-controlled submission assets remain. The V1 workbench accessibility and narrow-screen checks (#22, #23) are complete. Do not describe this prototype as production-ready; it has no merchant authentication or tenant isolation.
 
+**Hosted judge demo:** https://paypilot-hackathon-demo.onrender.com is live on Render Free in synthetic-only mode. It has no database, PayPal/OpenAI credentials, or payment/investigation API routes. `/readyz` returns ready; `/api/v1/orders` returns 404. The free instance may sleep when idle; see [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 ## What works
 
 - Embedded workbench with Synthetic Demo and Live API modes, payment queue/detail, order creation, event timeline, investigation evidence, and provider status/recovery actions.

@@ -10,7 +10,7 @@ Choose **Live API** to read orders and investigations from the Go API and use Pa
 
 ## Public hosted demo
 
-The public deployment is intentionally synthetic-only. Set `PUBLIC_DEMO_MODE=true` to serve the browser workbench without a database or provider credentials; live API routes are not registered in this mode. The Render configuration is in [`render.yaml`](render.yaml), and setup, limitations, and verification steps are in [`DEPLOYMENT.md`](DEPLOYMENT.md). Do not add merchant data, PayPal credentials, or AI keys to the public demo service.
+The public deployment is intentionally synthetic-only. [Open the hosted demo](https://paypilot-hackathon-demo.onrender.com). Set `PUBLIC_DEMO_MODE=true` to serve the browser workbench without a database or provider credentials; live API routes are not registered in this mode. The Render configuration is in [`render.yaml`](render.yaml), and setup, limitations, and verification steps are in [`DEPLOYMENT.md`](DEPLOYMENT.md). Do not add merchant data, PayPal credentials, or AI keys to the public demo service.
 
 ## Run locally
 

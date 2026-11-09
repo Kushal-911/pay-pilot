@@ -1,6 +1,6 @@
 # Devpost submission draft
 
-**State:** Updated 9 November 2026. **Draft only; not ready to submit.** The PayPal Sandbox checkout/capture/webhook has now been verified. OpenAI live-model evidence, owner-approved license, final public demo URL or complete clean-run instructions, public video, owner review, and final rules check remain submission gates.
+**State:** Updated 9 November 2026. **Draft only; not ready to submit.** The PayPal Sandbox checkout/capture/webhook and synthetic hosted demo have now been verified. OpenAI live-model evidence, owner-approved license, public video, owner review, and final rules check remain submission gates.
 
 ## Project name
 
@@ -51,7 +51,7 @@ Further work merged on 5 November includes the [evidence-first workbench and cap
 
 - **Public source repository:** https://github.com/Kushal-911/pay-pilot
 - **Functional demo access:** follow the clean setup and run instructions in [`README.md`](README.md). Start the local Compose database/API and open the embedded workbench. Select **Demo** for the synthetic walkthrough; it is the verified path that does not require external credentials. Judges need a Docker-capable environment to run the full stack.
-- **Hosted demo URL:** not currently available.
+- **Hosted demo URL:** https://paypilot-hackathon-demo.onrender.com — synthetic browser-only simulation; no live PayPal or AI calls and no money moved. The service can sleep while idle and take about a minute to wake; see `DEPLOYMENT.md`.
 - **Public YouTube video (<3 minutes):** pending; add the final public URL only after the recording shows the actual app functioning and all labels/claims have been checked.
 - **Visible open-source license:** pending owner decision in issue #26. Do not submit before the repository has the owner-approved license visible as required by Devpost.
 
