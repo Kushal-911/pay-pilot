@@ -601,7 +601,7 @@ function switchMode(mode) {
 
 function bindEvents() {
   $("#demo-mode").addEventListener("click", () => switchMode("demo"));
-  $("#live-mode").addEventListener("click", () => switchMode("live"));
+  $("#live-mode")?.addEventListener("click", () => switchMode("live"));
   $("#run-scenario").addEventListener("click", () => state.scenario === "complete" ? resetScenario() : runScenario());
   $("#reset-scenario").addEventListener("click", () => resetScenario());
   $("#payment-list").addEventListener("click", async (event) => {
@@ -630,7 +630,7 @@ function bindEvents() {
     openDialog("investigation-modal");
   });
   $("#run-investigation").addEventListener("click", () => state.mode === "demo" ? investigateDemo() : runLiveInvestigation());
-  $("#new-order-button").addEventListener("click", () => {
+  $("#new-order-button")?.addEventListener("click", () => {
     if (state.mode === "demo") { toast("Switch to Live API to create a real PayPal Sandbox checkout."); return; }
     $("#order-result").classList.add("hidden"); openDialog("new-order-modal");
   });
